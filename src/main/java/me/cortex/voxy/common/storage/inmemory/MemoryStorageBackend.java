@@ -105,7 +105,7 @@ public class MemoryStorageBackend extends StorageBackend {
 
     @Override
     public void close() {
-        Streams.of(this.maps).map(Long2ObjectMap::values).flatMap(ObjectCollection::stream).forEach(MemoryUtil::memFree);
+        java.util.Arrays.stream(this.maps).map(Long2ObjectMap::values).flatMap(ObjectCollection::stream).forEach(MemoryUtil::memFree);
         this.idMappings.values().forEach(MemoryUtil::memFree);
     }
 
