@@ -1,6 +1,8 @@
 package me.cortex.voxy.client.core.rendering;
 
+import me.cortex.voxy.client.core.gl.Capabilities;
 import me.cortex.voxy.client.core.gl.GlBuffer;
+import me.cortex.voxy.client.core.gl.shader.IShaderProcessor;
 import me.cortex.voxy.client.core.gl.shader.Shader;
 import me.cortex.voxy.client.core.gl.shader.ShaderType;
 import me.cortex.voxy.client.core.rendering.util.DownloadStream;
@@ -35,18 +37,25 @@ import static org.lwjgl.opengl.GL45.glClearNamedBufferData;
 import static org.lwjgl.opengl.GL45C.nglClearNamedBufferData;
 
 public class Gl46FarWorldRenderer extends AbstractFarWorldRenderer<Gl46Viewport, DefaultGeometryManager> {
-    private final Shader commandGen = Shader.make()
+    // Strip int64 extension declaration when GPU doesn't support it, so #ifdef fallback paths are used
+    private static final IShaderProcessor INT64_PROCESSOR = Capabilities.INSTANCE.INT64_t
+            ? (type, source) -> source
+            : (type, source) -> source.replace(
+                    "#extension GL_ARB_gpu_shader_int64 : enable",
+                    "// GL_ARB_gpu_shader_int64 not supported, using ivec2 fallback");
+
+    private final Shader commandGen = Shader.make(INT64_PROCESSOR)
             .add(ShaderType.COMPUTE, "voxy:lod/gl46/cmdgen.comp")
             .compile();
 
-    private final Shader lodShader = Shader.make()
+    private final Shader lodShader = Shader.make(INT64_PROCESSOR)
             .add(ShaderType.VERTEX, "voxy:lod/gl46/quads2.vert")
             .add(ShaderType.FRAGMENT, "voxy:lod/gl46/quads.frag")
             .compile();
 
 
     //TODO: Note the cull shader needs a different element array since its rastering cubes not quads
-    private final Shader cullShader = Shader.make()
+    private final Shader cullShader = Shader.make(INT64_PROCESSOR)
             .add(ShaderType.VERTEX, "voxy:lod/gl46/cull/raster.vert")
             .add(ShaderType.FRAGMENT, "voxy:lod/gl46/cull/raster.frag")
             .compile();
