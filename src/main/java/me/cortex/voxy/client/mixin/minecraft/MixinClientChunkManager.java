@@ -19,7 +19,7 @@ public class MixinClientChunkManager {
     private void injectUnload(int x, int z, CallbackInfo ci) {
         var core = ((IGetVoxelCore)(world.worldRenderer)).getVoxelCore();
         if (core != null && VoxyConfig.CONFIG.ingestEnabled) {
-            //core.enqueueIngest(world.getChunk(x, z));
+            core.enqueueIngest(world.getChunk(x, z));
         }
     }
 }
