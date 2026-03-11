@@ -4,6 +4,7 @@ import me.cortex.voxy.client.Voxy;
 import me.cortex.voxy.client.core.IGetVoxelCore;
 import me.cortex.voxy.client.config.VoxyConfig;
 import me.cortex.voxy.client.core.VoxelCore;
+import me.cortex.voxy.common.Logger;
 import net.minecraft.client.render.*;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
@@ -44,7 +45,14 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
         if (this.core != null) {
             throw new IllegalStateException("Trying to create new core while a core already exists");
         }
-        this.core = Voxy.createVoxelCore(this.world);
+        try {
+            this.core = Voxy.createVoxelCore(this.world);
+        } catch (Exception e) {
+            Logger.error("Voxy failed to initialize (likely unsupported GPU). Disabling Voxy.");
+            e.printStackTrace();
+            this.core = null;
+            VoxyConfig.CONFIG.enabled = false;
+        }
     }
 
     public VoxelCore getVoxelCore() {

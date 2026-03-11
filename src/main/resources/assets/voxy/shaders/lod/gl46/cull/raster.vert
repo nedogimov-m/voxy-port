@@ -1,19 +1,14 @@
 #version 460 core
 #extension GL_ARB_gpu_shader_int64 : enable
-#define VISIBILITY_ACCESS
-
-#define SECTION_METADATA_BUFFER_BINDING 1
-#define VISIBILITY_BUFFER_BINDING 2
-#define INDIRECT_SECTION_LOOKUP_BINDING 3
-
-#import <voxy:lod/section.glsl>
+#define VISIBILITY_ACCESS writeonly
 #import <voxy:lod/gl46/bindings.glsl>
+#import <voxy:lod/section.glsl>
 
 flat out uint id;
 flat out uint value;
 
 void main() {
-    uint sid = indirectLookup[gl_InstanceID];
+    uint sid = gl_InstanceID;
 
     SectionMeta section = sectionData[sid];
 
@@ -29,11 +24,7 @@ void main() {
 
     gl_Position = MVP * vec4(vec3(pos),1);
 
-    //Write to the section id, to track temporal over time (litterally just need a single bit, 1 fking bit, but no)
+    //Write to this id
     id = sid;
-
-    //Me when data race condition between visibilityData in the vert shader and frag shader
-    uint previous = visibilityData[sid]&0x7fffffffu;
-    bool wasVisibleLastFrame = previous==(frameId-1);
-    value = (frameId&0x7fffffffu)|(uint(wasVisibleLastFrame)<<31);//Encode if it was visible last frame
+    value = frameId;
 }
