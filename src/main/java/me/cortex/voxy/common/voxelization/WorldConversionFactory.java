@@ -40,6 +40,10 @@ public class WorldConversionFactory {
                                 int y = (oy<<2)|iy;
                                 int z = (oz<<2)|iz;
                                 var state = blockContainer.get(x, y, z);
+                                if (state == null) {
+                                    data[G(x, y, z)] = Mapper.AIR;
+                                    continue;
+                                }
                                 byte light = lightSupplier.supply(x,y,z,state);
                                 if (!(state.isAir() && (light==0))) {
                                     if (block != state) {
