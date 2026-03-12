@@ -60,7 +60,7 @@ public class RenderGenerationService {
                 }
                 var section = task.sectionSupplier.get();
                 if (section == null) {
-                    continue;
+                    continue; // Semaphore already consumed by acquireUninterruptibly, task removed from queue - balanced
                 }
                 section.assertNotFree();
                 BuiltSection mesh = null;
@@ -73,22 +73,24 @@ public class RenderGenerationService {
                         throw new RuntimeException(ex);
                     }
                     //We need to reinsert the build task into the queue
-                    //System.err.println("Render task failed to complete due to un-computed client id");
                     synchronized (this.taskQueue) {
                         this.taskQueue.computeIfAbsent(section.key, key->{this.taskCounter.release(); return task;});
                     }
+                } finally {
+                    section.release();
                 }
-                section.release();
                 if (mesh != null) {
-                    //TODO: if the mesh is null, need to clear the cache at that point
                     this.resultConsumer.accept(mesh.clone());
                     if (!this.meshCache.putMesh(mesh)) {
                         mesh.free();
                     }
                 }
             } catch (Exception e) {
-                System.err.println(e);
-                MinecraftClient.getInstance().executeSync(()->MinecraftClient.getInstance().player.sendMessage(Text.literal("Voxy render service had an exception while executing please check logs and report error")));
+                System.err.println("Voxy render worker exception: " + e);
+                e.printStackTrace();
+                try {
+                    MinecraftClient.getInstance().executeSync(()->MinecraftClient.getInstance().player.sendMessage(Text.literal("Voxy render service had an exception while executing please check logs and report error")));
+                } catch (Exception ignored) {}
             }
         }
     }

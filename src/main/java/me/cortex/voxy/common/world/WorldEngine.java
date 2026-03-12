@@ -109,33 +109,32 @@ public class WorldEngine {
 
     //TODO: move this to auxilery class  so that it can take into account larger than 4 mip levels
     //Executes an update to the world and automatically updates all the parent mip layers up to level 4 (e.g. where 1 chunk section is 1 block big)
-    public void insertUpdate(VoxelizedSection section) {//TODO: add a bitset of levels to update and if it should force update
+    public void insertUpdate(VoxelizedSection section) {
         //The >>1 is cause the world sections size is 32x32x32 vs the 16x16x16 of the voxelized section
         for (int lvl = 0; lvl < this.maxMipLevels; lvl++) {
             var worldSection = this.acquire(lvl, section.x >> (lvl + 1), section.y >> (lvl + 1), section.z >> (lvl + 1));
-            int msk = (1<<(lvl+1))-1;
-            int bx = (section.x&msk)<<(4-lvl);
-            int by = (section.y&msk)<<(4-lvl);
-            int bz = (section.z&msk)<<(4-lvl);
             boolean didChange = false;
-            for (int y = by; y < (16>>lvl)+by; y++) {
-                for (int z = bz; z < (16>>lvl)+bz; z++) {
-                    for (int x = bx; x < (16>>lvl)+bx; x++) {
-                        long newId = section.get(lvl, x-bx, y-by, z-bz);
-                        long oldId = worldSection.set(x, y, z, newId);
-                        didChange |= newId != oldId;
+            try {
+                int msk = (1<<(lvl+1))-1;
+                int bx = (section.x&msk)<<(4-lvl);
+                int by = (section.y&msk)<<(4-lvl);
+                int bz = (section.z&msk)<<(4-lvl);
+                for (int y = by; y < (16>>lvl)+by; y++) {
+                    for (int z = bz; z < (16>>lvl)+bz; z++) {
+                        for (int x = bx; x < (16>>lvl)+bx; x++) {
+                            long newId = section.get(lvl, x-bx, y-by, z-bz);
+                            long oldId = worldSection.set(x, y, z, newId);
+                            didChange |= newId != oldId;
+                        }
                     }
                 }
+            } finally {
+                if (didChange) {
+                    this.markDirty(worldSection);
+                }
+                worldSection.release();
             }
-
-            //Need to release the section after using it
-            if (didChange) {
-                //Mark the section as dirty (enqueuing saving and geometry rebuild) and move to parent mip level
-                this.markDirty(worldSection);
-                worldSection.release();
-            } else {
-                //If nothing changed just need to release, dont need to update parent mips
-                worldSection.release();
+            if (!didChange) {
                 break;
             }
         }

@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class VoxelIngestService {
     private volatile boolean running = true;
@@ -23,6 +24,9 @@ public class VoxelIngestService {
 
     private final ConcurrentLinkedDeque<WorldChunk> ingestQueue = new ConcurrentLinkedDeque<>();
     private final Semaphore ingestCounter = new Semaphore(0);
+    private final AtomicLong totalIngestedChunks = new AtomicLong(0);
+    private final AtomicLong totalIngestedSections = new AtomicLong(0);
+    private final AtomicLong totalEnqueued = new AtomicLong(0);
 
     private final ConcurrentHashMap<Long, Pair<ChunkNibbleArray, ChunkNibbleArray>> captureLightMap = new ConcurrentHashMap<>(1000,0.75f, 7);
 
@@ -46,6 +50,7 @@ public class VoxelIngestService {
             if (!this.running) break;
             try {
                 var chunk = this.ingestQueue.pop();
+                this.totalIngestedChunks.incrementAndGet();
                 int i = chunk.getBottomSectionCoord() - 1;
                 for (var section : chunk.getSectionArray()) {
                     i++;
@@ -78,6 +83,7 @@ public class VoxelIngestService {
                         WorldConversionFactory.mipSection(csec, this.world.getMapper());
                         this.world.insertUpdate(csec);
                     }
+                    this.totalIngestedSections.incrementAndGet();
                 }
             } catch (Exception e) {
                 System.err.println(e);
@@ -117,13 +123,29 @@ public class VoxelIngestService {
     }
 
     public void enqueueIngest(WorldChunk chunk) {
+        long count = this.totalEnqueued.incrementAndGet();
         fetchLightingData(this.captureLightMap, chunk);
         this.ingestQueue.add(chunk);
         this.ingestCounter.release();
+        if (count <= 5 || count % 50 == 0) {
+            System.out.println("[Voxy] Enqueued chunk " + chunk.getPos() + " (total enqueued: " + count + ", ingested: " + this.totalIngestedChunks.get() + ", sections: " + this.totalIngestedSections.get() + ")");
+        }
     }
 
     public int getTaskCount() {
         return this.ingestCounter.availablePermits();
+    }
+
+    public long getTotalIngestedChunks() {
+        return this.totalIngestedChunks.get();
+    }
+
+    public long getTotalIngestedSections() {
+        return this.totalIngestedSections.get();
+    }
+
+    public long getTotalEnqueued() {
+        return this.totalEnqueued.get();
     }
 
     public void shutdown() {
