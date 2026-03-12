@@ -49,6 +49,15 @@ void main() {
 
     vec3 cornerPos = vec3(((ipos<<detail)-baseSectionPos)<<5)-cameraSubPos;
 
+    // Skip LOD sections within vanilla render distance to prevent z-fighting
+    float sectionSize = float(32 << detail);
+    vec3 sectionCenter = cornerPos + vec3(sectionSize * 0.5);
+    // Use closest point on AABB to camera for distance check
+    vec3 closestPoint = max(cornerPos, min(vec3(0.0), cornerPos + vec3(sectionSize)));
+    float distSq = dot(closestPoint, closestPoint);
+    if (distSq < vanillaRenderDistSq && detail == 0) {
+        return;
+    }
 
     //Check the occlusion data from last frame
     bool shouldRender = visibilityData[gl_GlobalInvocationID.x] == frameId - 1;

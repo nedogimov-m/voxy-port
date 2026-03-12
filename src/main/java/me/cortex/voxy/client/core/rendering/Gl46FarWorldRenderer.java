@@ -9,6 +9,7 @@ import me.cortex.voxy.client.core.rendering.util.DownloadStream;
 import me.cortex.voxy.client.core.rendering.util.UploadStream;
 import me.cortex.voxy.client.mixin.joml.AccessFrustumIntersection;
 import net.minecraft.block.Blocks;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.util.math.MatrixStack;
 import org.joml.Matrix4f;
@@ -112,6 +113,11 @@ public class Gl46FarWorldRenderer extends AbstractFarWorldRenderer<Gl46Viewport,
         }
         innerTranslation.getToAddress(ptr); ptr += 4*3;
         MemoryUtil.memPutInt(ptr, viewport.frameId++); ptr += 4;
+        // Vanilla render distance in blocks, squared, for LOD distance culling
+        // Only cull LOD within the actual vanilla render area to avoid z-fighting overlap
+        int viewDist = MinecraftClient.getInstance().options.getViewDistance().getValue() * 16;
+        float cullDist = Math.max(viewDist - 16, 16);
+        MemoryUtil.memPutFloat(ptr, cullDist * cullDist); ptr += 4;
     }
 
     public void renderFarAwayOpaque(Gl46Viewport viewport) {

@@ -10,6 +10,7 @@ layout(binding = 0, std140) uniform SceneUniform {
     Frustum frustum;
     vec3 cameraSubPos;
     uint frameId;
+    float vanillaRenderDistSq;
 };
 
 struct BlockModel {
