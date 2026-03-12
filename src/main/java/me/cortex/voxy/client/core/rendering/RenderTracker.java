@@ -178,12 +178,15 @@ public class RenderTracker {
             this.renderGen.clearCache(section.lvl, section.x+1, section.y, section.z);
             this.renderGen.clearCache(section.lvl, section.x, section.y, section.z-1);
             this.renderGen.clearCache(section.lvl, section.x, section.y, section.z+1);
-            //TODO: replace this:: with a class cached lambda ref (cause doing this:: still does a lambda allocation)
+            this.renderGen.clearCache(section.lvl, section.x, section.y-1, section.z);
+            this.renderGen.clearCache(section.lvl, section.x, section.y+1, section.z);
             this.renderGen.enqueueTask(section.lvl, section.x, section.y, section.z, this::shouldStillBuild);
             this.renderGen.enqueueTask(section.lvl, section.x-1, section.y, section.z, this::shouldStillBuild);
             this.renderGen.enqueueTask(section.lvl, section.x+1, section.y, section.z, this::shouldStillBuild);
             this.renderGen.enqueueTask(section.lvl, section.x, section.y, section.z-1, this::shouldStillBuild);
             this.renderGen.enqueueTask(section.lvl, section.x, section.y, section.z+1, this::shouldStillBuild);
+            this.renderGen.enqueueTask(section.lvl, section.x, section.y-1, section.z, this::shouldStillBuild);
+            this.renderGen.enqueueTask(section.lvl, section.x, section.y+1, section.z, this::shouldStillBuild);
         }
         //this.renderGen.enqueueTask(section);
     }

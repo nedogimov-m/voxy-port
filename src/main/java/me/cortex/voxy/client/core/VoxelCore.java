@@ -223,6 +223,7 @@ public class VoxelCore {
         debug.add("Render service tasks: " + this.renderGen.getTaskCount());
          */
         debug.add("I/S/R tasks: " + this.world.ingestService.getTaskCount() + "/"+this.world.savingService.getTaskCount()+"/"+this.renderGen.getTaskCount());
+        debug.add("Ingest total: " + this.world.ingestService.getTotalEnqueued() + " enq, " + this.world.ingestService.getTotalIngestedChunks() + " chunks, " + this.world.ingestService.getTotalIngestedSections() + " secs");
         debug.add("Loaded cache sizes: " + Arrays.toString(this.world.getLoadedSectionCacheSizes()));
         debug.add("Mesh cache count: " + this.renderGen.getMeshCacheCount());
         this.renderer.addDebugData(debug);
