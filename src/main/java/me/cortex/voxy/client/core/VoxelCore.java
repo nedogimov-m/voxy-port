@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import me.cortex.voxy.client.Voxy;
 import me.cortex.voxy.client.config.VoxyConfig;
+import me.cortex.voxy.client.core.gl.Capabilities;
 import me.cortex.voxy.client.core.rendering.*;
 import me.cortex.voxy.client.core.rendering.building.RenderGenerationService;
 import me.cortex.voxy.client.core.rendering.post.PostProcessing;
@@ -202,12 +203,13 @@ public class VoxelCore {
 
         this.renderer.renderFarAwayOpaque(viewport);
 
-        //Compute the SSAO of the rendered terrain
-        this.postProcessing.computeSSAO(projection, matrices);
+        //Skip SSAO on Intel iGPU — compute SSAO causes artifacts on Mesa drivers
+        if (!Capabilities.INSTANCE.isIntel) {
+            this.postProcessing.computeSSAO(projection, matrices);
+        }
 
         //We can render the translucent directly after as it is the furthest translucent objects
         this.renderer.renderFarAwayTranslucent(viewport);
-
 
         this.postProcessing.renderPost(projection, RenderSystem.getProjectionMatrix(), boundFB);
 
