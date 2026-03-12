@@ -63,16 +63,15 @@ public class VoxelIngestService {
                                 section.getBlockStateContainer(),
                                 section.getBiomeContainer(),
                                 (x, y, z, state) -> {
-                                    if (lighting == null || ((lighting.first() != null && lighting.first().isUninitialized())&&(lighting.second()!=null&&lighting.second().isUninitialized()))) {
+                                    if (state == null || lighting == null || ((lighting.first() != null && lighting.first().isUninitialized())&&(lighting.second()!=null&&lighting.second().isUninitialized()))) {
                                         return (byte) 0x0f;
                                     } else {
-                                        //Lighting is a piece of shit cause its done per face
                                         int block = lighting.first()!=null?Math.min(15,lighting.first().get(x, y, z)):0;
                                         int sky = lighting.second()!=null?Math.min(15,lighting.second().get(x, y, z)):0;
                                         if (block<state.getLuminance()) {
                                             block = state.getLuminance();
                                         }
-                                        sky = 15-sky;//This is cause sky light is inverted which saves memory when saving empty sections
+                                        sky = 15-sky;
                                         return (byte) (sky|(block<<4));
                                     }
                                 },
