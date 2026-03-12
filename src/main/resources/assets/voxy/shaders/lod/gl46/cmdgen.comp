@@ -51,20 +51,15 @@ void main() {
 
     // Skip LOD sections within vanilla render distance to prevent z-fighting
     float sectionSize = float(32 << detail);
-    vec3 sectionCenter = cornerPos + vec3(sectionSize * 0.5);
-    // Use closest point on AABB to camera for distance check
     vec3 closestPoint = max(cornerPos, min(vec3(0.0), cornerPos + vec3(sectionSize)));
     float distSq = dot(closestPoint, closestPoint);
     if (distSq < vanillaRenderDistSq && detail == 0) {
         return;
     }
 
-    // Frustum cull first (cheap, avoids processing off-screen sections entirely)
-    vec3 aabbMin = cornerPos;
-    vec3 aabbMax = cornerPos + vec3(sectionSize);
-    if (!testFrustum(frustum, aabbMin, aabbMax)) {
-        return;
-    }
+    // NOTE: No frustum culling here! The cull pass (raster.vert/frag) handles frustum rejection
+    // implicitly via depth test. Explicit frustum culling here causes edge flickering because
+    // sections exiting the frustum disappear instantly, bypassing the grace period.
 
     //Check the occlusion data from recent frames (grace period of 3 frames to prevent flickering)
     bool shouldRender = (frameId - visibilityData[gl_GlobalInvocationID.x]) <= 3u;

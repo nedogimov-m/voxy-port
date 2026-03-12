@@ -61,13 +61,10 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
 
     @Inject(method = "reload()V", at = @At("TAIL"))
     private void resetVoxelCore(CallbackInfo ci) {
-        if (this.world != null && this.core != null) {
-            this.core.shutdown();
-            this.core = null;
-            if (VoxyConfig.CONFIG.enabled) {
-                this.populateCore();
-            }
-        }
+        // Don't restart Voxy on renderer reload (e.g. Iris shader toggle).
+        // Voxy's GL resources are independent of Minecraft's resource system.
+        // Full restart causes RocksDB close/reopen, loss of all render sections,
+        // and 1 FPS while everything rebuilds. Use setWorld or reloadVoxelCore for manual restart.
     }
 
     @Inject(method = "setWorld", at = @At("TAIL"))
