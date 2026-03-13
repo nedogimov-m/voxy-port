@@ -295,6 +295,7 @@ public class ModelTextureBakery {
     private static void renderQuads(BufferBuilder builder, BlockState state, BakedModel model, MatrixStack stack, long randomValue) {
         for (Direction direction : new Direction[]{Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST, null}) {
             var quads = model.getQuads(state, direction, new LocalRandom(randomValue));
+            if (quads == null) continue;
             for (var quad : quads) {
                 //TODO: mark pixels that have
                 int meta = quad.hasColor()?1:0;

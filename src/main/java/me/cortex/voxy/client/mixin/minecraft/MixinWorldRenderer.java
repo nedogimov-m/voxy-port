@@ -29,10 +29,21 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
     @Unique private boolean pendingInit = false;
     @Unique private int pendingInitFrames = 0;
 
-    // Query the real GL capabilities from the native driver, bypassing any
+    // Check if GL capabilities have the extensions Voxy needs.
+    // Iris creates a GL 3.2 core profile context, so caps.OpenGL45 is false
+    // even on GPUs that support all GL 4.5 features via ARB extensions.
+    // We check for the specific extensions instead of the GL version.
+    @Unique
+    private static boolean voxy$hasRequiredExtensions(GLCapabilities caps) {
+        return caps != null
+            && caps.GL_ARB_direct_state_access
+            && caps.GL_ARB_buffer_storage;
+    }
+
+    // Query fresh GL capabilities from the native driver, bypassing any
     // cached/swapped capabilities (e.g. from Iris shader pipelines).
     @Unique
-    private static GLCapabilities voxy$queryRealCapabilities() {
+    private static GLCapabilities voxy$queryFreshCapabilities() {
         try {
             GLCapabilities saved = null;
             try {
@@ -40,10 +51,10 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
             } catch (IllegalStateException ignored) {}
 
             GL.setCapabilities(null);
-            GLCapabilities real = GL.createCapabilities();
+            GLCapabilities fresh = GL.createCapabilities();
 
-            if (real.OpenGL45) {
-                return real;
+            if (voxy$hasRequiredExtensions(fresh)) {
+                return fresh;
             } else {
                 if (saved != null) {
                     GL.setCapabilities(saved);
@@ -63,12 +74,12 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
             boolean canInit = false;
             try {
                 GLCapabilities caps = GL.getCapabilities();
-                canInit = (caps != null && caps.OpenGL45);
+                canInit = voxy$hasRequiredExtensions(caps);
             } catch (IllegalStateException ignored) {}
 
             if (!canInit) {
-                GLCapabilities real = voxy$queryRealCapabilities();
-                if (real != null) {
+                GLCapabilities fresh = voxy$queryFreshCapabilities();
+                if (fresh != null) {
                     canInit = true;
                 }
             }
@@ -78,15 +89,14 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
                 this.pendingInitFrames = 0;
                 this.populateCore();
             } else if (this.pendingInitFrames > 120) {
-                // GPU does not support OpenGL 4.5 — log once and disable
                 String glVersion = "unknown";
                 String glRenderer = "unknown";
                 try {
                     glVersion = GL11.glGetString(GL11.GL_VERSION);
                     glRenderer = GL11.glGetString(GL11.GL_RENDERER);
                 } catch (Exception ignored) {}
-                Logger.error("Voxy requires OpenGL 4.5 but your GPU only supports OpenGL " + glVersion
-                    + " (" + glRenderer + "). Voxy has been disabled.");
+                Logger.error("Voxy requires GL_ARB_direct_state_access and GL_ARB_buffer_storage but they are not available."
+                    + " OpenGL " + glVersion + " (" + glRenderer + "). Voxy has been disabled.");
                 this.pendingInit = false;
                 this.pendingInitFrames = 0;
                 VoxyConfig.CONFIG.enabled = false;
@@ -146,16 +156,15 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
             this.core = null;
         }
         if (VoxyConfig.CONFIG.enabled) {
-            // Try immediate init if GL 4.5 is available right now
+            // Try immediate init if required extensions are available
             try {
                 GLCapabilities caps = GL.getCapabilities();
-                if (caps != null && caps.OpenGL45) {
+                if (voxy$hasRequiredExtensions(caps)) {
                     this.populateCore();
                     return;
                 }
-                // Try querying real driver capabilities
-                GLCapabilities real = voxy$queryRealCapabilities();
-                if (real != null) {
+                GLCapabilities fresh = voxy$queryFreshCapabilities();
+                if (fresh != null) {
                     this.populateCore();
                     return;
                 }
