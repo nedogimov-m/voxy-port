@@ -10,6 +10,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
+import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -24,17 +25,24 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
 
     @Shadow private @Nullable ClientWorld world;
     @Unique private VoxelCore core;
-    // Always defer Voxy GL init to the first render frame.
-    // During setWorld, the GL context may not be current (Iris destroys/recreates its pipeline),
-    // and calling glCreateBuffers without a context causes a native FATAL ERROR that kills the JVM.
-    // In render(), the GL context is guaranteed to be valid.
     @Unique private boolean pendingInit = false;
+
+    // Check if an OpenGL context is actually current on this thread.
+    // GL.getCapabilities() is cached in ThreadLocal and doesn't reflect Iris unbinding the context.
+    // GLFW.glfwGetCurrentContext() returns 0L when no context is bound.
+    @Unique
+    private static boolean voxy$hasGLContext() {
+        return GLFW.glfwGetCurrentContext() != 0L;
+    }
 
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/WorldRenderer;setupTerrain(Lnet/minecraft/client/render/Camera;Lnet/minecraft/client/render/Frustum;ZZ)V", shift = At.Shift.AFTER))
     private void injectSetup(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f projectionMatrix, CallbackInfo ci) {
         if (this.pendingInit && this.core == null) {
-            this.pendingInit = false;
-            this.populateCore();
+            if (voxy$hasGLContext()) {
+                this.pendingInit = false;
+                this.populateCore();
+            }
+            // else: no GL context yet (Iris pipeline rebuild), keep pendingInit for next frame
         }
         if (this.core != null) {
             this.core.renderSetup(this.frustum, camera);
@@ -70,10 +78,7 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
 
     @Inject(method = "reload()V", at = @At("TAIL"))
     private void resetVoxelCore(CallbackInfo ci) {
-        // Don't restart Voxy on renderer reload (e.g. Iris shader toggle).
-        // Voxy's GL resources are independent of Minecraft's resource system.
-        // Full restart causes RocksDB close/reopen, loss of all render sections,
-        // and 1 FPS while everything rebuilds. Use setWorld or reloadVoxelCore for manual restart.
+        // No-op: don't restart Voxy on renderer reload (e.g. Iris shader toggle).
     }
 
     @Inject(method = "setWorld", at = @At("TAIL"))
@@ -92,9 +97,6 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
             this.core = null;
         }
         if (VoxyConfig.CONFIG.enabled) {
-            // Always defer init to the first render frame where the GL context is guaranteed.
-            // Iris may destroy the GL context during setWorld (pipeline rebuild), and native
-            // GL calls without a context cause an unrecoverable JVM crash.
             this.pendingInit = true;
         }
     }
@@ -106,8 +108,6 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
             this.core = null;
         }
         if (this.world != null && VoxyConfig.CONFIG.enabled) {
-            // Defer to render frame — may be called from config screen while Iris
-            // has no GL context (pipeline rebuild on returning to the game).
             this.pendingInit = true;
         }
     }
