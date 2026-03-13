@@ -106,7 +106,9 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
             this.core = null;
         }
         if (this.world != null && VoxyConfig.CONFIG.enabled) {
-            this.populateCore();
+            // Defer to render frame — may be called from config screen while Iris
+            // has no GL context (pipeline rebuild on returning to the game).
+            this.pendingInit = true;
         }
     }
 
