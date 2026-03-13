@@ -1,5 +1,6 @@
 package me.cortex.voxy.client.core.rendering.post;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import me.cortex.voxy.client.core.gl.GlFramebuffer;
 import me.cortex.voxy.client.core.gl.GlTexture;
 import me.cortex.voxy.client.core.gl.shader.Shader;
@@ -24,6 +25,8 @@ import static org.lwjgl.opengl.GL45C.glBlitNamedFramebuffer;
 import static org.lwjgl.opengl.GL45C.glTextureParameterf;
 
 public class PostProcessing {
+    private static final float UNDERWATER_FOG_DENSITY = 0.04f;
+
     private final GlFramebuffer framebuffer;
     private final GlFramebuffer framebufferSSAO;
     private int width;
@@ -184,11 +187,9 @@ public class PostProcessing {
         // location 6 = fogEnabled (1.0 = underwater), location 7 = fogColor, location 8 = fogDensity
         if (this.underwater) {
             glUniform1f(6, 1.0f);
-            // Get MC's current fog color (set by BackgroundRenderer for underwater)
-            float[] fogColor = com.mojang.blaze3d.systems.RenderSystem.getShaderFogColor();
+            float[] fogColor = RenderSystem.getShaderFogColor();
             glUniform4f(7, fogColor[0], fogColor[1], fogColor[2], fogColor[3]);
-            // Underwater fog density — exponential fog, ~15-20 block visibility
-            glUniform1f(8, 0.04f);
+            glUniform1f(8, UNDERWATER_FOG_DENSITY);
         } else {
             glUniform1f(6, 0.0f);
         }
