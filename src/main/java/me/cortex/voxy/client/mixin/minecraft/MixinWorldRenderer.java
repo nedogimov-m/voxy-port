@@ -10,6 +10,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLCapabilities;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,44 +29,68 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
     @Unique private VoxelCore core;
     @Unique private boolean pendingInit = false;
     @Unique private int pendingInitFrames = 0;
-    // Store the real MC GL capabilities (GL 4.5+) captured at startup,
-    // so we can restore them before Voxy init even when Iris has swapped
-    // to its own compatibility (GL 3.2) context.
-    @Unique private static GLCapabilities voxy$realCapabilities = null;
+
+    // Force-create fresh GL capabilities from the actual native GL context.
+    // Iris swaps the LWJGL GLCapabilities ThreadLocal to its own GL 3.2 set,
+    // but the real native context is still GL 4.5. By calling GL.createCapabilities()
+    // after clearing the cache, we query the real driver and get GL 4.5 caps back.
+    // The key insight: we need to do this ONLY when Iris hasn't yet made
+    // its context "current" — i.e., the native context is MC's real one.
+    @Unique
+    private static GLCapabilities voxy$forceCreateCapabilities() {
+        try {
+            // Save whatever Iris set
+            GLCapabilities irisCaps = null;
+            try {
+                irisCaps = GL.getCapabilities();
+            } catch (IllegalStateException ignored) {}
+
+            // Force LWJGL to re-query the native driver
+            GL.setCapabilities(null);
+            GLCapabilities realCaps = GL.createCapabilities();
+
+            System.out.println("[Voxy/GL-Debug] Force-created capabilities: GL45=" + realCaps.OpenGL45 +
+                " GL_ARB_direct_state_access=" + realCaps.GL_ARB_direct_state_access +
+                " GL_ARB_buffer_storage=" + realCaps.GL_ARB_buffer_storage);
+
+            if (realCaps.OpenGL45) {
+                // Real context supports GL 4.5 — use these caps
+                return realCaps;
+            } else {
+                // Still not GL 4.5 — restore Iris caps and return null
+                if (irisCaps != null) {
+                    GL.setCapabilities(irisCaps);
+                }
+                return null;
+            }
+        } catch (Exception e) {
+            System.out.println("[Voxy/GL-Debug] forceCreateCapabilities failed: " + e.getClass().getName() + ": " + e.getMessage());
+            return null;
+        }
+    }
 
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/WorldRenderer;setupTerrain(Lnet/minecraft/client/render/Camera;Lnet/minecraft/client/render/Frustum;ZZ)V", shift = At.Shift.AFTER))
     private void injectSetup(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f projectionMatrix, CallbackInfo ci) {
         if (this.pendingInit && this.core == null) {
             this.pendingInitFrames++;
 
-            // On the first render frame ever, capture the real GL capabilities.
-            // At this point MC has its full GL 4.5 context before Iris swaps it.
-            if (voxy$realCapabilities == null) {
-                try {
-                    GLCapabilities caps = GL.getCapabilities();
-                    if (caps != null && caps.OpenGL45) {
-                        voxy$realCapabilities = caps;
-                        System.out.println("[Voxy] Captured real GL capabilities (GL45=true)");
-                    }
-                } catch (IllegalStateException ignored) {}
-            }
-
-            // Check current capabilities — if GL45 is available, we're on the real context
+            // Check if current caps already have GL45
             boolean canInit = false;
             try {
                 GLCapabilities currentCaps = GL.getCapabilities();
                 canInit = (currentCaps != null && currentCaps.OpenGL45);
+                if (canInit) {
+                    System.out.println("[Voxy] Current capabilities have GL45=true, initializing directly");
+                }
             } catch (IllegalStateException ignored) {}
 
-            if (!canInit && voxy$realCapabilities != null) {
-                // Iris has swapped to its compatibility context (GL 3.2).
-                // Restore the real capabilities so Voxy's GL45 calls use the correct
-                // function pointers. The underlying GL context IS the real one (Iris
-                // runs inside MC's render loop), but Iris swapped the LWJGL capabilities
-                // object to its own limited set. Restoring the original caps fixes this.
-                System.out.println("[Voxy] Current GL45=false, restoring real capabilities and initializing");
-                GL.setCapabilities(voxy$realCapabilities);
-                canInit = true;
+            if (!canInit) {
+                // Iris swapped caps — force-recreate from native context
+                GLCapabilities realCaps = voxy$forceCreateCapabilities();
+                if (realCaps != null) {
+                    canInit = true;
+                    System.out.println("[Voxy] Restored GL45 capabilities, initializing");
+                }
             }
 
             if (canInit) {
@@ -74,7 +99,7 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
                 this.populateCore();
             } else {
                 if (this.pendingInitFrames <= 5 || this.pendingInitFrames % 60 == 0) {
-                    System.out.println("[Voxy] GL context not ready, deferring init (frame " + this.pendingInitFrames + ")");
+                    System.out.println("[Voxy] GL context not ready (GL45 unavailable), deferring init (frame " + this.pendingInitFrames + ")");
                 }
                 if (this.pendingInitFrames > 600) {
                     System.out.println("[Voxy] Giving up on GL context after " + this.pendingInitFrames + " frames");
@@ -137,16 +162,32 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
             this.core = null;
         }
         if (VoxyConfig.CONFIG.enabled) {
-            // Capture GL capabilities here (before Iris swaps them in render).
-            // setWorld runs on Render thread with the real MC GL context.
-            if (voxy$realCapabilities == null) {
-                try {
-                    GLCapabilities caps = GL.getCapabilities();
-                    if (caps != null && caps.OpenGL45) {
-                        voxy$realCapabilities = caps;
-                        System.out.println("[Voxy] Captured real GL capabilities from setWorld (GL45=true)");
-                    }
-                } catch (IllegalStateException ignored) {}
+            // Debug: check GL state at setWorld time
+            try {
+                GLCapabilities caps = GL.getCapabilities();
+                System.out.println("[Voxy/GL-Debug] setWorld: current caps GL45=" +
+                    (caps != null ? caps.OpenGL45 : "null") +
+                    " ARB_dsa=" + (caps != null ? caps.GL_ARB_direct_state_access : "null"));
+
+                // Try force-recreating to check the real native driver
+                GL.setCapabilities(null);
+                GLCapabilities freshCaps = GL.createCapabilities();
+                System.out.println("[Voxy/GL-Debug] setWorld: fresh caps GL45=" + freshCaps.OpenGL45 +
+                    " ARB_dsa=" + freshCaps.GL_ARB_direct_state_access);
+
+                if (freshCaps.OpenGL45) {
+                    // We have GL 4.5 right now — init immediately!
+                    System.out.println("[Voxy] setWorld: GL45 available, initializing immediately");
+                    GL.setCapabilities(freshCaps);
+                    this.populateCore();
+                    return;
+                } else {
+                    // Restore caps and defer
+                    if (caps != null) GL.setCapabilities(caps);
+                    else GL.setCapabilities(freshCaps);
+                }
+            } catch (Exception e) {
+                System.out.println("[Voxy/GL-Debug] setWorld GL check failed: " + e);
             }
             this.pendingInit = true;
         }
