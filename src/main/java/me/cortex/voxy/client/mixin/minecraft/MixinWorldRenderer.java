@@ -10,6 +10,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
+import org.lwjgl.opengl.GL;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -24,9 +25,16 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
 
     @Shadow private @Nullable ClientWorld world;
     @Unique private VoxelCore core;
+    @Unique private boolean pendingInit = false;
 
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/WorldRenderer;setupTerrain(Lnet/minecraft/client/render/Camera;Lnet/minecraft/client/render/Frustum;ZZ)V", shift = At.Shift.AFTER))
     private void injectSetup(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f projectionMatrix, CallbackInfo ci) {
+        // Deferred init: if GL context wasn't ready during setWorld (e.g. Iris pipeline rebuild),
+        // initialize on the first render frame when the context is guaranteed to be valid.
+        if (this.pendingInit && this.core == null) {
+            this.pendingInit = false;
+            this.populateCore();
+        }
         if (this.core != null) {
             this.core.renderSetup(this.frustum, camera);
         }
@@ -69,6 +77,7 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
 
     @Inject(method = "setWorld", at = @At("TAIL"))
     private void initVoxelCore(ClientWorld world, CallbackInfo ci) {
+        this.pendingInit = false;
         if (world == null) {
             if (this.core != null) {
                 this.core.shutdown();
@@ -82,7 +91,16 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
             this.core = null;
         }
         if (VoxyConfig.CONFIG.enabled) {
-            this.populateCore();
+            // Check if GL context is available. Iris may destroy/recreate its pipeline
+            // during setWorld, leaving no valid GL context. In that case, defer init
+            // to the first render frame where the context is guaranteed to exist.
+            try {
+                GL.getCapabilities();
+                this.populateCore();
+            } catch (IllegalStateException e) {
+                Logger.warn("GL context not available during setWorld, deferring Voxy init to first render frame");
+                this.pendingInit = true;
+            }
         }
     }
 
