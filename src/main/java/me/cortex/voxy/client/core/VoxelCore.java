@@ -173,7 +173,7 @@ public class VoxelCore {
         ).mulLocal(makeProjectionMatrix(16, 16*3000));
     }
 
-    public void renderOpaque(MatrixStack matrices, double cameraX, double cameraY, double cameraZ) {
+    public void renderOpaque(MatrixStack matrices, double cameraX, double cameraY, double cameraZ, boolean underwater) {
         if (IrisUtil.irisShadowActive()) {
             return;
         }
@@ -181,16 +181,9 @@ public class VoxelCore {
         matrices.translate(-cameraX, -cameraY, -cameraZ);
         DebugUtil.setPositionMatrix(matrices);
         matrices.pop();
-        //this.renderer.getModelManager().updateEntry(0, Blocks.DIRT_PATH.getDefaultState());
 
-        //this.renderer.getModelManager().updateEntry(0, Blocks.COMPARATOR.getDefaultState());
-        //this.renderer.getModelManager().updateEntry(0, Blocks.OAK_LEAVES.getDefaultState());
-
-        //var fb = Iris.getPipelineManager().getPipelineNullable().getSodiumTerrainPipeline().getTerrainSolidFramebuffer();
-        //fb.bind();
-
+        this.renderer.underwaterFlag = underwater;
         var projection = computeProjectionMat();
-        //var projection = RenderSystem.getProjectionMatrix();//computeProjectionMat();
         var viewport = this.viewportSelector.getViewport();
         viewport
                 .setProjection(projection)
@@ -199,7 +192,7 @@ public class VoxelCore {
                 .setScreenSize(MinecraftClient.getInstance().getFramebuffer().textureWidth, MinecraftClient.getInstance().getFramebuffer().textureHeight);
 
         int boundFB = GL11.glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
-        this.postProcessing.setup(MinecraftClient.getInstance().getFramebuffer().textureWidth, MinecraftClient.getInstance().getFramebuffer().textureHeight, boundFB);
+        this.postProcessing.setup(MinecraftClient.getInstance().getFramebuffer().textureWidth, MinecraftClient.getInstance().getFramebuffer().textureHeight, boundFB, underwater);
 
         this.renderer.renderFarAwayOpaque(viewport);
 

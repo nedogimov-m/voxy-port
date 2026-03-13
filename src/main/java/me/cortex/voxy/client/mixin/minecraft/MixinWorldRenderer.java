@@ -13,6 +13,7 @@ import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GLCapabilities;
+import net.minecraft.client.render.CameraSubmersionType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -111,7 +112,9 @@ public abstract class MixinWorldRenderer implements IGetVoxelCore {
     private void injectOpaqueRender(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f projectionMatrix, CallbackInfo ci) {
         if (this.core != null) {
             var cam = camera.getPos();
-            this.core.renderOpaque(matrices, cam.x, cam.y, cam.z);
+            var submersion = camera.getSubmersionType();
+            boolean underwater = submersion == CameraSubmersionType.WATER || submersion == CameraSubmersionType.LAVA;
+            this.core.renderOpaque(matrices, cam.x, cam.y, cam.z, underwater);
         }
     }
 

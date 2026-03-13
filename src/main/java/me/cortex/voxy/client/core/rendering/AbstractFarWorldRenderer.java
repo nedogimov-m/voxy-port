@@ -126,9 +126,14 @@ public abstract class AbstractFarWorldRenderer <T extends Viewport, J extends Ab
 
         //TODO: fix this in a better way than this ungodly hacky stuff, causes clouds to dissapear
         //RenderSystem.setShaderFogColor(1f, 1f, 1f, 0f);
-        RenderSystem.setShaderFogEnd(99999999);
-        RenderSystem.setShaderFogStart(9999999);
+        // Don't override fog when underwater — let MC's water fog apply
+        if (!this.underwaterFlag) {
+            RenderSystem.setShaderFogEnd(99999999);
+            RenderSystem.setShaderFogStart(9999999);
+        }
     }
+
+    public boolean underwaterFlag;
 
     public abstract void renderFarAwayOpaque(T viewport);
 

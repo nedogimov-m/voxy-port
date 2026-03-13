@@ -12,6 +12,7 @@ import me.jellysquid.mods.sodium.client.render.viewport.CameraTransform;
 import net.irisshaders.iris.shadows.ShadowRenderer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.CameraSubmersionType;
 import net.minecraft.client.util.math.MatrixStack;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.FabricUtil;
@@ -32,7 +33,10 @@ public class MixinDefaultChunkRenderer {
                 var stack = new MatrixStack();
                 stack.loadIdentity();
                 stack.multiplyPositionMatrix(new Matrix4f(matrices.modelView()));
-                core.renderOpaque(stack, camera.x, camera.y, camera.z);
+                var cam = MinecraftClient.getInstance().gameRenderer.getCamera();
+                var sub = cam.getSubmersionType();
+                boolean underwater = sub == CameraSubmersionType.WATER || sub == CameraSubmersionType.LAVA;
+                core.renderOpaque(stack, camera.x, camera.y, camera.z, underwater);
             }
         }
     }
