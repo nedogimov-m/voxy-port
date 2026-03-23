@@ -5,8 +5,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import me.cortex.voxy.client.core.IGetVoxelCore;
-import me.cortex.voxy.client.importers.WorldImporter;
+import me.cortex.voxy.client.core.IGetVoxyRenderSystem;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
@@ -34,18 +33,25 @@ public class WorldImportCommand {
                                         .executes(WorldImportCommand::importRaw))));
     }
 
+    // TODO: Phase 6 - World import uses old VoxelCore.createWorldImporter() which is not ported to VoxyRenderSystem yet.
+    // The commands below will need a new import path through VoxyRenderSystem/WorldEngine when import is reimplemented.
 
     private static int importRaw(CommandContext<FabricClientCommandSource> ctx) {
         var instance = MinecraftClient.getInstance();
         var file = new File(ctx.getArgument("path", String.class));
-        ((IGetVoxelCore)instance.worldRenderer).getVoxelCore().createWorldImporter(MinecraftClient.getInstance().player.clientWorld, file);
+        var renderer = ((IGetVoxyRenderSystem)instance.worldRenderer).getVoxyRenderSystem();
+        if (renderer == null) {
+            ctx.getSource().sendError(net.minecraft.text.Text.literal("Voxy renderer not active"));
+            return 0;
+        }
+        // TODO: Phase 6 - reimplemented world import through VoxyRenderSystem
+        ctx.getSource().sendError(net.minecraft.text.Text.literal("World import not yet available in new rendering pipeline"));
         return 0;
     }
 
     private static int importBobby(CommandContext<FabricClientCommandSource> ctx) {
-        var instance = MinecraftClient.getInstance();
-        var file = new File(".bobby").toPath().resolve(ctx.getArgument("world_name", String.class)).toFile();
-        ((IGetVoxelCore)instance.worldRenderer).getVoxelCore().createWorldImporter(MinecraftClient.getInstance().player.clientWorld, file);
+        // TODO: Phase 6 - reimplemented world import through VoxyRenderSystem
+        ctx.getSource().sendError(net.minecraft.text.Text.literal("World import not yet available in new rendering pipeline"));
         return 0;
     }
 
@@ -72,9 +78,8 @@ public class WorldImportCommand {
     }
 
     private static int importWorld(CommandContext<FabricClientCommandSource> ctx) {
-        var instance = MinecraftClient.getInstance();
-        var file = new File("saves").toPath().resolve(ctx.getArgument("world_name", String.class)).resolve("region").toFile();
-        ((IGetVoxelCore)instance.worldRenderer).getVoxelCore().createWorldImporter(MinecraftClient.getInstance().player.clientWorld, file);
+        // TODO: Phase 6 - reimplemented world import through VoxyRenderSystem
+        ctx.getSource().sendError(net.minecraft.text.Text.literal("World import not yet available in new rendering pipeline"));
         return 0;
     }
 

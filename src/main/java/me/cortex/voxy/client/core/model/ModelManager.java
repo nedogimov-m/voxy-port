@@ -6,7 +6,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenCustomHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
-import me.cortex.voxy.client.core.IGetVoxelCore;
+import me.cortex.voxy.client.core.IGetVoxyRenderSystem;
 import me.cortex.voxy.client.core.gl.GlBuffer;
 import me.cortex.voxy.client.core.gl.GlTexture;
 import me.cortex.voxy.client.core.rendering.util.UploadStream;
@@ -163,7 +163,8 @@ public class ModelManager {
             var fluidState = blockState.getFluidState().getBlockState();
 
             //TODO:FIXME: PASS IN THE Mapper instead of grabbing it!!! THIS IS CRTICIAL TO FIX
-            int fluidStateId = ((IGetVoxelCore)MinecraftClient.getInstance().worldRenderer).getVoxelCore().getWorldEngine().getMapper().getIdForBlockState(fluidState);
+            var renderer = ((IGetVoxyRenderSystem)MinecraftClient.getInstance().worldRenderer).getVoxyRenderSystem();
+            int fluidStateId = renderer.getEngine().getMapper().getIdForBlockState(fluidState);
 
 
             clientFluidStateId = this.idMappings[fluidStateId];

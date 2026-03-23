@@ -1,5 +1,6 @@
 package me.cortex.voxy.client.mixin.sodium;
 
+import me.cortex.voxy.commonImpl.VoxyCommon;
 import me.jellysquid.mods.sodium.client.render.SodiumWorldRenderer;
 import me.jellysquid.mods.sodium.client.render.chunk.ChunkRenderMatrices;
 import net.minecraft.client.render.RenderLayer;
@@ -10,6 +11,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = SodiumWorldRenderer.class, remap = false)
 public class MixinSodiumWorldRender {
+    // Sodium 0.5.13 doesn't have initRenderer(CommandList) like Sodium 0.6+
+    // Thread update is handled in MixinWorldRenderer.createRenderer() instead.
+
     @Inject(method = "drawChunkLayer", at = @At("HEAD"), cancellable = true, require = 0)
     private void cancelRender(RenderLayer renderLayer, ChunkRenderMatrices matrices, double x, double y, double z, CallbackInfo ci) {
         //ci.cancel();

@@ -64,6 +64,8 @@ public class VoxyClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        initVoxyClient();
+
         //FREX integration
         FabricLoader.getInstance()
                 .getEntrypoints("frex_flawless_frames", Consumer.class)

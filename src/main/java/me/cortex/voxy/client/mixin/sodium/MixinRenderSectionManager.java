@@ -1,7 +1,7 @@
 package me.cortex.voxy.client.mixin.sodium;
 
 import me.cortex.voxy.client.config.VoxyConfig;
-import me.cortex.voxy.client.core.IGetVoxelCore;
+import me.cortex.voxy.client.core.IGetVoxyRenderSystem;
 import me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.world.chunk.WorldChunk;
@@ -27,22 +27,22 @@ public class MixinRenderSectionManager {
 
     @Inject(method = "onChunkAdded", at = @At("HEAD"))
     private void injectIngestOnLoad(int x, int z, CallbackInfo ci) {
-        var core = ((IGetVoxelCore)(world.worldRenderer)).getVoxelCore();
-        if (core != null && VoxyConfig.CONFIG.ingestEnabled) {
+        var renderer = ((IGetVoxyRenderSystem)(world.worldRenderer)).getVoxyRenderSystem();
+        if (renderer != null && VoxyConfig.CONFIG.ingestEnabled) {
             WorldChunk chunk = world.getChunk(x, z);
             if (chunk != null) {
-                core.enqueueIngest(chunk);
+                renderer.getEngine().ingestService.enqueueIngest(chunk);
             }
         }
     }
 
     @Inject(method = "onChunkRemoved", at = @At("HEAD"))
     private void injectIngestOnUnload(int x, int z, CallbackInfo ci) {
-        var core = ((IGetVoxelCore)(world.worldRenderer)).getVoxelCore();
-        if (core != null && VoxyConfig.CONFIG.ingestEnabled) {
+        var renderer = ((IGetVoxyRenderSystem)(world.worldRenderer)).getVoxyRenderSystem();
+        if (renderer != null && VoxyConfig.CONFIG.ingestEnabled) {
             WorldChunk chunk = world.getChunk(x, z);
             if (chunk != null) {
-                core.enqueueIngest(chunk);
+                renderer.getEngine().ingestService.enqueueIngest(chunk);
             }
         }
     }
@@ -53,13 +53,13 @@ public class MixinRenderSectionManager {
     // Debounced to max once per 2 seconds per chunk to avoid flooding the ingest queue.
     @Inject(method = "scheduleRebuild", at = @At("HEAD"))
     private void injectIngestOnBlockChange(int x, int y, int z, boolean important, CallbackInfo ci) {
-        var core = ((IGetVoxelCore)(world.worldRenderer)).getVoxelCore();
-        if (core != null && VoxyConfig.CONFIG.ingestEnabled) {
+        var renderer = ((IGetVoxyRenderSystem)(world.worldRenderer)).getVoxyRenderSystem();
+        if (renderer != null && VoxyConfig.CONFIG.ingestEnabled) {
             long chunkKey = (long) x << 32 | (z & 0xFFFFFFFFL);
             long now = System.currentTimeMillis();
             Long lastTime = voxy$lastIngestTime.get(chunkKey);
             if (lastTime != null && (now - lastTime) < 2000) {
-                return; // Skip — already ingested this chunk recently
+                return; // Skip -- already ingested this chunk recently
             }
             voxy$lastIngestTime.put(chunkKey, now);
 
@@ -70,7 +70,7 @@ public class MixinRenderSectionManager {
 
             WorldChunk chunk = world.getChunk(x, z);
             if (chunk != null) {
-                core.enqueueIngest(chunk);
+                renderer.getEngine().ingestService.enqueueIngest(chunk);
             }
         }
     }

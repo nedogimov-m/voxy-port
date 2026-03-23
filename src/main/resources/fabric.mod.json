@@ -13,10 +13,14 @@
   "icon": "assets/voxy/icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": [
-      "me.cortex.voxy.client.Voxy"
+    "main": [
+      "me.cortex.voxy.commonImpl.VoxyCommon"
     ],
-"modmenu": [
+    "client": [
+      "me.cortex.voxy.client.Voxy",
+      "me.cortex.voxy.client.VoxyClient"
+    ],
+    "modmenu": [
       "me.cortex.voxy.client.config.VoxyConfigScreenFactory"
     ]
   },
