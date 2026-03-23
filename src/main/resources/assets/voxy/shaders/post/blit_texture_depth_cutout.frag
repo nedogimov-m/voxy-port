@@ -1,11 +1,11 @@
-#version 450 core
+#version 430
 
-layout(binding = 0) uniform sampler2D depthTex;
+uniform sampler2D depthTex;
 layout(location = 1) uniform mat4 invProjMat;
 layout(location = 2) uniform mat4 projMat;
 
 #ifdef EMIT_COLOUR
-layout(binding = 3) uniform sampler2D colourTex;
+uniform sampler2D colourTex;
 #ifdef USE_ENV_FOG
 layout(location = 4) uniform vec4 endParams;
 layout(location = 5) uniform vec4 fogColour;

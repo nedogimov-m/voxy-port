@@ -1,4 +1,4 @@
-#version 460 core
+#version 430
 //Use quad shuffling to compute fragment mip
 //#extension GL_KHR_shader_subgroup_quad: enable
 #ifdef USE_SINGLE_TRI
@@ -9,8 +9,8 @@
 #extension GL_NV_fragment_shader_barycentric: require
 #endif
 
-layout(binding = 0) uniform sampler2D blockModelAtlas;
-layout(binding = 2) uniform sampler2D depthTex;
+uniform sampler2D blockModelAtlas;
+uniform sampler2D depthTex;
 
 //#define DEBUG_RENDER
 

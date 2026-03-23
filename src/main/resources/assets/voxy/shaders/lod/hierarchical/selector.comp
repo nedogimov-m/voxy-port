@@ -1,4 +1,4 @@
-#version 460 core
+#version 430
 
 #define WORKGROUP 4
 #define MINI_BATCH_SIZE 32
