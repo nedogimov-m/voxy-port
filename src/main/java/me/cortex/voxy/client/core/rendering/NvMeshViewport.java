@@ -16,6 +16,12 @@ public class NvMeshViewport extends Viewport<NvMeshViewport> {
     }
 
     protected void delete0() {
+        super.delete0();
         this.visibilityBuffer.free();
+    }
+
+    @Override
+    public GlBuffer getRenderList() {
+        throw new UnsupportedOperationException("Legacy viewport does not support getRenderList");
     }
 }

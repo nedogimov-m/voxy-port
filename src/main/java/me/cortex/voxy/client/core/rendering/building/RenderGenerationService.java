@@ -28,7 +28,7 @@ public class RenderGenerationService {
     private final Semaphore taskCounter = new Semaphore(0);
     private final WorldEngine world;
     private final ModelManager modelManager;
-    private final Consumer<BuiltSection> resultConsumer;
+    private volatile Consumer<BuiltSection> resultConsumer;
     private final BuiltSectionMeshCache meshCache = new BuiltSectionMeshCache();
     private final boolean emitMeshlets;
 
@@ -44,6 +44,10 @@ public class RenderGenerationService {
             this.workers[i].setName("Render generation service #" + i);
             this.workers[i].start();
         }
+    }
+
+    public void setResultConsumer(Consumer<BuiltSection> consumer) {
+        this.resultConsumer = consumer;
     }
 
     //TODO: add a generated render data cache
@@ -115,6 +119,10 @@ public class RenderGenerationService {
     // like if its in the render queue and if we should abort building the render data
     //1 proposal fix is a Long2ObjectLinkedOpenHashMap<WorldSection> which means we can abort if needed,
     // also gets rid of dependency on a WorldSection (kinda)
+    public void enqueueTask(long pos) {
+        this.enqueueTask(WorldEngine.getLevel(pos), WorldEngine.getX(pos), WorldEngine.getY(pos), WorldEngine.getZ(pos));
+    }
+
     public void enqueueTask(int lvl, int x, int y, int z) {
         this.enqueueTask(lvl, x, y, z, (l,x1,y1,z1)->true);
     }

@@ -10,12 +10,17 @@ import static org.lwjgl.opengl.GL20.glDeleteProgram;
 import static org.lwjgl.opengl.GL20.glUseProgram;
 
 public class Shader extends TrackedObject {
+    @FunctionalInterface
+    public interface ShaderFactory<T extends Shader> {
+        T create(Builder<T> builder, int program);
+    }
+
     private final int id;
-    private Shader(int program) {
+    protected Shader(int program) {
         id = program;
     }
 
-    public static Builder make(IShaderProcessor... processors) {
+    private static <T extends Shader> Builder<T> makeInternal(ShaderFactory<T> factory, IShaderProcessor... processors) {
         List<IShaderProcessor> aa = new ArrayList<>(List.of(processors));
         Collections.reverse(aa);
         IShaderProcessor applicator = (type,source)->source;
@@ -23,11 +28,19 @@ public class Shader extends TrackedObject {
             IShaderProcessor finalApplicator = applicator;
             applicator = (type, source) -> finalApplicator.process(type, processor.process(type, source));
         }
-        return new Builder(applicator);
+        return new Builder<>(factory, applicator);
     }
 
-    public static Builder make() {
-        return new Builder((aa,source)->source);
+    public static Builder<Shader> make(IShaderProcessor... processors) {
+        return makeInternal((_builder, program) -> new Shader(program), processors);
+    }
+
+    public static Builder<Shader> make() {
+        return new Builder<>((_builder, program) -> new Shader(program), (aa,source)->source);
+    }
+
+    public static Builder<AutoBindingShader> makeAuto(IShaderProcessor... processors) {
+        return makeInternal(AutoBindingShader::new, processors);
     }
 
     public int id() {
@@ -43,35 +56,57 @@ public class Shader extends TrackedObject {
         glDeleteProgram(this.id);
     }
 
-    public static class Builder {
-        private final Map<String, String> defines = new HashMap<>();
+    public static class Builder <T extends Shader> {
+        final Map<String, String> defines = new HashMap<>();
         private final Map<ShaderType, String> sources = new HashMap<>();
         private final IShaderProcessor processor;
-        private Builder(IShaderProcessor processor) {
+        private final ShaderFactory<T> factory;
+
+        private Builder(ShaderFactory<T> factory, IShaderProcessor processor) {
+            this.factory = factory;
             this.processor = processor;
         }
 
-        public Builder define(String name) {
+        public Builder<T> define(String name) {
             this.defines.put(name, "");
             return this;
         }
 
-        public Builder define(String name, int value) {
+        public Builder<T> define(String name, int value) {
             this.defines.put(name, Integer.toString(value));
             return this;
         }
 
-        public Builder add(ShaderType type, String id) {
+        public Builder<T> define(String name, float value) {
+            this.defines.put(name, Float.toString(value));
+            return this;
+        }
+
+        public Builder<T> defineIf(String name, boolean condition) {
+            if (condition) {
+                this.defines.put(name, "");
+            }
+            return this;
+        }
+
+        public Builder<T> defineIf(String name, boolean condition, int value) {
+            if (condition) {
+                this.defines.put(name, Integer.toString(value));
+            }
+            return this;
+        }
+
+        public Builder<T> add(ShaderType type, String id) {
             this.addSource(type, ShaderLoader.parse(id));
             return this;
         }
 
-        public Builder addSource(ShaderType type, String source) {
+        public Builder<T> addSource(ShaderType type, String source) {
             this.sources.put(type, this.processor.process(type, source));
             return this;
         }
 
-        public Shader compile() {
+        public T compile() {
             int program = GL20C.glCreateProgram();
             int[] shaders = new int[this.sources.size()];
             {
@@ -99,7 +134,7 @@ public class Shader extends TrackedObject {
             }
             printProgramLinkLog(program);
             verifyProgramLinked(program);
-            return new Shader(program);
+            return this.factory.create(this, program);
         }
 
 

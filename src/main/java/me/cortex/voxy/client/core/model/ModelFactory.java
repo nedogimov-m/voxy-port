@@ -15,6 +15,7 @@ import me.cortex.voxy.common.util.Pair;
 import me.cortex.voxy.common.world.other.Mapper;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.color.block.BlockColorProvider;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderLayers;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -68,7 +69,7 @@ public class ModelFactory {
         }
     }
 
-    private final Biome DEFAULT_BIOME = MinecraftClient.getInstance().level.getRegistryManager().get(RegistryKeys.BIOME).get(BiomeKeys.PLAINS);
+    private final Biome DEFAULT_BIOME = MinecraftClient.getInstance().world.getRegistryManager().get(RegistryKeys.BIOME).get(BiomeKeys.PLAINS);
 
     public final SoftwareModelTextureBakery bakery2;
     private final long bakeScratchBuffer = MemoryUtil.nmemAlloc(MODEL_TEXTURE_SIZE*MODEL_TEXTURE_SIZE*8*6);
@@ -176,11 +177,11 @@ public class ModelFactory {
 
         var blockState = this.mapper.getBlockStateFromBlockId(blockId);
 
-        if (blockState.getBlock() instanceof StairBlock sb) {
-            if (sb.baseState.contains(BlockStateProperties.WATERLOGGED)) {
-                blockState = sb.baseState.setValue(BlockStateProperties.WATERLOGGED, blockState.get(BlockStateProperties.WATERLOGGED));
+        if (blockState.getBlock() instanceof StairsBlock sb) {
+            if (sb.baseBlockState.contains(net.minecraft.state.property.Properties.WATERLOGGED)) {
+                blockState = sb.baseBlockState.with(net.minecraft.state.property.Properties.WATERLOGGED, blockState.get(net.minecraft.state.property.Properties.WATERLOGGED));
             } else {
-                blockState = sb.baseState;
+                blockState = sb.baseBlockState;
             }
         }
 
@@ -189,7 +190,7 @@ public class ModelFactory {
         boolean isFluid = blockState.getBlock() instanceof FluidBlock;
         if ((!isFluid) && (!blockState.getFluidState().isEmpty())) {
             //Insert into the fluid LUT
-            var fluidState = blockState.getFluidState().createLegacyBlock();
+            var fluidState = blockState.getFluidState().getBlockState();
 
             int fluidStateId = this.mapper.getIdForBlockState(fluidState);
 
@@ -253,7 +254,7 @@ public class ModelFactory {
     public void processAllThings() {
         var biomeEntry = this.biomeQueue.poll();
         while (biomeEntry != null) {
-            var biomeRegistry = MinecraftClient.getInstance().level.getRegistryManager().get(RegistryKeys.BIOME);
+            var biomeRegistry = MinecraftClient.getInstance().world.getRegistryManager().get(RegistryKeys.BIOME);
             var res = this.addBiome0(biomeEntry.id, biomeRegistry.get(new Identifier(biomeEntry.biome)));
             if (res != null) {
                 this.uploadResults.add(res);
@@ -351,7 +352,7 @@ public class ModelFactory {
 
         if ((!isFluid) && (!blockState.getFluidState().isEmpty())) {
             //Insert into the fluid LUT
-            var fluidState = blockState.getFluidState().createLegacyBlock();
+            var fluidState = blockState.getFluidState().getBlockState();
 
             int fluidStateId = this.mapper.getIdForBlockState(fluidState);
 
@@ -449,7 +450,7 @@ public class ModelFactory {
             boolean allFalse = true;
             //Guestimation test for if the block culls itself
             for (var dir : Direction.values()) {
-                if (blockState.skipRendering(blockState, dir)) {
+                if (blockState.isSideInvisible(blockState, dir)) {
                     allFalse = false;
                 } else {
                     allTrue = false;
@@ -718,7 +719,7 @@ public class ModelFactory {
     }
 
     private static BlockColorProvider getColourProvider(Block block) {
-        return MinecraftClient.getInstance().getBlockColors().blockColors.byId(Registries.BLOCK.getId(block));
+        return MinecraftClient.getInstance().getBlockColors().providers.get(Registries.BLOCK.getRawId(block));
     }
 
     //TODO: add a method to detect biome dependent colours (can do by detecting if getColor is ever called)
@@ -727,22 +728,22 @@ public class ModelFactory {
     private static int captureColourConstant(BlockColorProvider colorProvider, BlockState state, Biome biome) {
         var getter = new BlockRenderView() {
             @Override
-            public float getShade(Direction direction, boolean shaded) {
+            public float getBrightness(Direction direction, boolean shaded) {
                 return 0;
             }
 
             @Override
-            public int getBrightness(LightType type, BlockPos pos) {
+            public int getLightLevel(LightType type, BlockPos pos) {
                 return 0;
             }
 
             @Override
-            public LightingProvider getLightEngine() {
+            public LightingProvider getLightingProvider() {
                 return null;
             }
 
             @Override
-            public int getBlockTint(BlockPos pos, ColorResolver colorResolver) {
+            public int getColor(BlockPos pos, ColorResolver colorResolver) {
                 return colorResolver.getColor(biome, 0, 0);
             }
 
@@ -768,36 +769,36 @@ public class ModelFactory {
             }
 
             @Override
-            public int getMinY() {
+            public int getBottomY() {
                 return 0;
             }
         };
         //Multiple layer bs to do with flower beds
-        int c = colorProvider.getColor(state, getter, BlockPos.ZERO, 0);
+        int c = colorProvider.getColor(state, getter, BlockPos.ORIGIN, 0);
         if (c!=-1) return c;
-        return colorProvider.getColor(state, getter, BlockPos.ZERO, 1);
+        return colorProvider.getColor(state, getter, BlockPos.ORIGIN, 1);
     }
 
     private static boolean isBiomeDependentColour(BlockColorProvider colorProvider, BlockState state) {
         boolean[] biomeDependent = new boolean[1];
         var getter = new BlockRenderView() {
             @Override
-            public float getShade(Direction direction, boolean shaded) {
+            public float getBrightness(Direction direction, boolean shaded) {
                 return 0;
             }
 
             @Override
-            public int getBrightness(LightType type, BlockPos pos) {
+            public int getLightLevel(LightType type, BlockPos pos) {
                 return 0;
             }
 
             @Override
-            public LightingProvider getLightEngine() {
+            public LightingProvider getLightingProvider() {
                 return null;
             }
 
             @Override
-            public int getBlockTint(BlockPos pos, ColorResolver colorResolver) {
+            public int getColor(BlockPos pos, ColorResolver colorResolver) {
                 biomeDependent[0] = true;
                 return 0;
             }
@@ -824,12 +825,12 @@ public class ModelFactory {
             }
 
             @Override
-            public int getMinY() {
+            public int getBottomY() {
                 return 0;
             }
         };
-        colorProvider.getColor(state, getter, BlockPos.ZERO, 0);
-        colorProvider.getColor(state, getter, BlockPos.ZERO, 1);
+        colorProvider.getColor(state, getter, BlockPos.ORIGIN, 0);
+        colorProvider.getColor(state, getter, BlockPos.ORIGIN, 1);
         return biomeDependent[0];
     }
 
@@ -840,7 +841,7 @@ public class ModelFactory {
     private static float[] computeModelDepth(ColourDepthTextureData[] textures, int checkMode, int computeMode) {
         float[] res = new float[6];
         for (var dir : Direction.values()) {
-            var data = textures[dir.byId()];
+            var data = textures[dir.getId()];
             float fd = TextureUtils.computeDepth(data, computeMode, checkMode);//Compute the min float depth, smaller means closer to the camera, range 0-1
             //int depth = Math.round(fd * MODEL_TEXTURE_SIZE);
             //If fd is -1, it means that there was nothing rendered on that face and it should be discarded

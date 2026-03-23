@@ -1,6 +1,7 @@
 package me.cortex.voxy.client.core.rendering.util;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
+import me.cortex.voxy.client.core.gl.Capabilities;
 import me.cortex.voxy.client.core.gl.GlBuffer;
 import me.cortex.voxy.client.core.gl.GlFence;
 import me.cortex.voxy.client.core.gl.GlPersistentMappedBuffer;
@@ -22,6 +23,8 @@ import static org.lwjgl.opengl.GL44.GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT;
 import static org.lwjgl.opengl.GL44.GL_MAP_COHERENT_BIT;
 
 public class UploadStream {
+    public static final int BASE_ALLOCATION_ALIGNEMENT = Math.max(Capabilities.INSTANCE.ssboBindingAlignment, 16);
+
     private final AllocationArena allocationArena = new AllocationArena();
     private final GlPersistentMappedBuffer uploadBuffer;
 
@@ -113,8 +116,61 @@ public class UploadStream {
     private record UploadFrame(GlFence fence, LongArrayList allocations) {}
     private record UploadData(GlBuffer target, long uploadOffset, long targetOffset, long size) {}
 
+    public long rawUpload(int size) {
+        return this.uploadBuffer.addr() + this.rawUploadAddress(size);
+    }
+
+    public long rawUploadAddress(int size) {
+        if (size < 0) {
+            throw new IllegalStateException("Negative size");
+        }
+
+        size = alignUp(size, BASE_ALLOCATION_ALIGNEMENT);
+
+        long addr;
+        if (this.caddr == -1 || !this.allocationArena.expand(this.caddr, size)) {
+            this.caddr = this.allocationArena.alloc(size);
+            if (this.caddr == SIZE_LIMIT) {
+                this.commit();
+                int attempts = 10;
+                while (--attempts != 0 && this.caddr == SIZE_LIMIT) {
+                    glFinish();
+                    this.tick();
+                    this.caddr = this.allocationArena.alloc(size);
+                }
+                if (this.caddr == SIZE_LIMIT) {
+                    throw new IllegalStateException("Could not allocate memory segment big enough for raw upload even after force flush");
+                }
+            }
+            this.thisFrameAllocations.add(this.caddr);
+            this.offset = size;
+            addr = this.caddr;
+        } else {
+            addr = this.caddr + this.offset;
+            this.offset += size;
+        }
+        return addr;
+    }
+
+    public long getBaseAddress() {
+        return this.uploadBuffer.addr();
+    }
+
+    public int getRawBufferId() {
+        return this.uploadBuffer.id;
+    }
+
     //A upload instance instead of passing one around by reference
     // MUST ONLY BE USED ON THE RENDER THREAD
     public static final UploadStream INSTANCE = new UploadStream(1<<25);//32 mb upload buffer
 
+    public static long alignUp(long val, long alignment) {
+        return ((val+alignment-1)/alignment)*alignment;
+    }
+    public static int alignUp(int val, int alignment) {
+        return ((val+alignment-1)/alignment)*alignment;
+    }
+    public static int alignUpAlloc(int val) {
+        return ((val+BASE_ALLOCATION_ALIGNEMENT-1)/BASE_ALLOCATION_ALIGNEMENT)*BASE_ALLOCATION_ALIGNEMENT;
+    }
 }

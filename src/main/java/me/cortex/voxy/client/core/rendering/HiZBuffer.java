@@ -115,4 +115,8 @@ public class HiZBuffer {
     public int getHizTextureId() {
         return this.texture.id;
     }
+
+    public int getPackedLevels() {
+        return (this.width<<16)|this.height;
+    }
 }

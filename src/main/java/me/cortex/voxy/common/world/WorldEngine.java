@@ -19,6 +19,15 @@ import java.util.function.Consumer;
 public class WorldEngine {
     public static final int MAX_LOD_LAYER = 4;
 
+    public static final int UPDATE_TYPE_BLOCK_BIT = 1;
+    public static final int UPDATE_TYPE_CHILD_EXISTENCE_BIT = 2;
+    public static final int UPDATE_TYPE_DONT_SAVE = 4;
+    public static final int DEFAULT_UPDATE_FLAGS = UPDATE_TYPE_BLOCK_BIT | UPDATE_TYPE_CHILD_EXISTENCE_BIT;
+
+    public static String pprintPos(long pos) {
+        return "(" + getLevel(pos) + ", " + getX(pos) + ", " + getY(pos) + ", " + getZ(pos) + ")";
+    }
+
     // Lifecycle management for VoxyInstance
     private volatile boolean live = true;
     private volatile long lastActiveTime = System.currentTimeMillis();

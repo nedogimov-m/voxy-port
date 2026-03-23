@@ -24,6 +24,7 @@ public final class WorldSection {
     long[] data = null;
     private final ActiveSectionTracker tracker;
     public final AtomicBoolean inSaveQueue = new AtomicBoolean();
+    volatile byte nonEmptyChildren;
 
     //When the first bit is set it means its loaded
     private final AtomicInteger atomicState = new AtomicInteger(1);
@@ -128,6 +129,10 @@ public final class WorldSection {
         this.assertNotFree();
         if (cache.length != this.data.length) throw new IllegalArgumentException();
         System.arraycopy(this.data, 0, cache, 0, this.data.length);
+    }
+
+    public byte getNonEmptyChildren() {
+        return this.nonEmptyChildren;
     }
 
     public boolean tryAcquire() {

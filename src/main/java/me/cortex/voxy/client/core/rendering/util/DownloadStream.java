@@ -8,9 +8,12 @@ import me.cortex.voxy.client.core.gl.GlFence;
 import me.cortex.voxy.client.core.gl.GlPersistentMappedBuffer;
 import me.cortex.voxy.client.core.util.AllocationArena;
 
+import me.cortex.voxy.common.util.MemoryBuffer;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.function.Consumer;
 
 import static me.cortex.voxy.client.core.util.AllocationArena.SIZE_LIMIT;
 import static org.lwjgl.opengl.ARBDirectStateAccess.glCopyNamedBufferSubData;
@@ -43,6 +46,22 @@ public class DownloadStream {
 
     private long caddr = -1;
     private long offset = 0;
+
+    //Pulls the entire buffer from the gpu
+    public void download(GlBuffer buffer, DownloadResultConsumer resultConsumer) {
+        this.download(buffer, 0, buffer.size(), resultConsumer);
+    }
+
+    public void download(GlBuffer buffer, Consumer<MemoryBuffer> resultConsumer) {
+        this.download(buffer, 0, buffer.size(), resultConsumer);
+    }
+
+    public void download(GlBuffer buffer, long downloadOffset, long size, Consumer<MemoryBuffer> consumer) {
+        this.download(buffer, downloadOffset, size, (ptr,size2)-> {
+            consumer.accept(MemoryBuffer.createUntrackedUnfreeableRawFrom(ptr, size));
+        });
+    }
+
     public void download(GlBuffer buffer, long destOffset, long size, DownloadResultConsumer resultConsumer) {
         if (size > Integer.MAX_VALUE) {
             throw new IllegalArgumentException();

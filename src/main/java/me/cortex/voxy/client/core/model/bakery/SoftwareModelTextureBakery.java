@@ -6,7 +6,7 @@ import me.cortex.voxy.common.util.UnsafeUtil;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderLayers;
-import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.Identifier;
@@ -14,24 +14,24 @@ import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.biome.ColorResolver;
 import net.minecraft.world.LightType;
 import net.minecraft.world.chunk.light.LightingProvider;
+import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LeavesBlock;
 import net.minecraft.block.FluidBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.BlockState;
 import net.minecraft.fluid.FluidState;
-import java.util.Random;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryUtil;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
-import static org.lwjgl.opengl.GL11.glFinish;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL45C.glGetTextureImage;
 
 public class SoftwareModelTextureBakery {
     //Note: the first bit of metadata is if alpha discard is enabled
@@ -44,40 +44,32 @@ public class SoftwareModelTextureBakery {
     }
 
     public void setupTexture() {
-        var tex = MinecraftClient.getInstance().getTextureManager().getTexture(new Identifier("minecraft", "textures/atlas/blocks.png")).getTexture();
-        if (tex.getFormat() != TextureFormat.RGBA8) {
-            throw new IllegalStateException("Block atlas not rgba8");
-        }
+        // In 1.20.1, we use GL-based texture readback instead of the 1.21 GpuBuffer API
+        var atlasTexture = (SpriteAtlasTexture) MinecraftClient.getInstance()
+                .getTextureManager()
+                .getTexture(new Identifier("minecraft", "textures/atlas/blocks.png"));
 
-        int targetMipLevel = 0;// Math.min(tex.getMipLevels(), 4)-1;//todo: we want to target the mip layer that has the 16x16 sized textures
+        int texId = atlasTexture.getGlId();
 
-        int width = tex.getWidth(targetMipLevel);
-        int height = tex.getHeight(targetMipLevel);
-        GpuBuffer gpuBuffer = RenderSystem.getDevice().createBuffer(() -> "Texture output buffer", 9, 4*width*height);//USAGE_COPY_SRC|USAGE_MAP_READ
-        CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-        boolean[] done = new boolean[1];
-        Runnable runnable = () -> {
-            try (GpuBuffer.MappedView mappedView = commandEncoder.mapBuffer(gpuBuffer, true, false)) {
-                var texture = new int[width*height];
-                for (int i = 0; i < texture.length; i++) {
-                    texture[i] = mappedView.data().getInt(i*4);
-                }
+        // Get texture dimensions via GL45 DSA
+        int[] w = new int[1], h = new int[1];
+        org.lwjgl.opengl.GL45.glGetTextureLevelParameteriv(texId, 0, GL_TEXTURE_WIDTH, w);
+        org.lwjgl.opengl.GL45.glGetTextureLevelParameteriv(texId, 0, GL_TEXTURE_HEIGHT, h);
+        int width = w[0];
+        int height = h[0];
 
-                this.rasterizer.setSamplerTexture(texture, width, height);
-            }
-            gpuBuffer.close();
-            done[0] = true;
-        };
+        // Read texture data using GL45 DSA (no need to bind)
+        int bufSize = width * height * 4;
+        ByteBuffer buffer = MemoryUtil.memAlloc(bufSize);
+        try {
+            glGetTextureImage(texId, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 
-        commandEncoder.copyTextureToBuffer(tex, gpuBuffer, 0, runnable, targetMipLevel);
-        glFinish();//Required for intel since they dont insert there own flush in, causing this loop to never exit
-        while (!done[0]) {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            RenderSystem.executePendingTasks();
+            int[] texture = new int[width * height];
+            buffer.asIntBuffer().get(texture);
+
+            this.rasterizer.setSamplerTexture(texture, width, height);
+        } finally {
+            MemoryUtil.memFree(buffer);
         }
     }
 
@@ -96,18 +88,17 @@ public class SoftwareModelTextureBakery {
             return;//Dont bake if invisible
         }
         var model = MinecraftClient.getInstance()
-                .getModelManager()
-                .getBlockModelShaper()
-                .getBlockModel(state);
+                .getBlockRenderManager()
+                .getModel(state);
 
         int meta = getMetaFromLayer(layer);
 
-        for (var part : model.collectParts(new java.util.Random(42L))) {
-            for (Direction direction : new Direction[]{Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST, null}) {
-                var quads = part.getQuads(direction);
-                for (var quad : quads) {
-                    this.vc.quad(quad, meta|(quad.isTinted()?4:0));
-                }
+        // In 1.20.1, BakedModel.getQuads(state, face, random) returns quads directly
+        var random = new net.minecraft.util.math.random.LocalRandom(42L);
+        for (Direction direction : new Direction[]{Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST, null}) {
+            var quads = model.getQuads(state, direction, random);
+            for (var quad : quads) {
+                this.vc.quad(quad, meta|(quad.hasColor()?4:0));
             }
         }
     }
@@ -122,24 +113,25 @@ public class SoftwareModelTextureBakery {
             metadata |= 4;//Has tint
             this.vc.setDefaultMeta(metadata);//Set the meta while baking
         }
-        MinecraftClient.getInstance().getBlockRenderer().renderLiquid(BlockPos.ZERO, new BlockRenderView() {
+        // In 1.20.1: BlockRenderManager.renderFluid(pos, world, vertexConsumer, blockState, fluidState)
+        MinecraftClient.getInstance().getBlockRenderManager().renderFluid(BlockPos.ORIGIN, new BlockRenderView() {
             @Override
-            public float getShade(Direction direction, boolean shaded) {
+            public float getBrightness(Direction direction, boolean shaded) {
                 return 0;
             }
 
             @Override
-            public LightingProvider getLightEngine() {
+            public LightingProvider getLightingProvider() {
                 return null;
             }
 
             @Override
-            public int getBrightness(LightType type, BlockPos pos) {
+            public int getLightLevel(LightType type, BlockPos pos) {
                 return 0;
             }
 
             @Override
-            public int getBlockTint(BlockPos pos, ColorResolver colorResolver) {
+            public int getColor(BlockPos pos, ColorResolver colorResolver) {
                 return 0;
             }
 
@@ -155,15 +147,6 @@ public class SoftwareModelTextureBakery {
                     return Blocks.AIR.getDefaultState();
                 }
 
-                //Fixme:
-                // This makes it so that the top face of water is always air, if this is commented out
-                //  the up block will be a liquid state which makes the sides full
-                // if this is uncommented, that issue is fixed but e.g. stacking water layers ontop of eachother
-                //  doesnt fill the side of the block
-
-                //if (pos.getY() == 1) {
-                //    return Blocks.AIR.getDefaultState();
-                //}
                 return state;
             }
 
@@ -182,7 +165,7 @@ public class SoftwareModelTextureBakery {
             }
 
             @Override
-            public int getMinY() {
+            public int getBottomY() {
                 return 0;
             }
         }, this.vc, state, state.getFluidState());
@@ -190,7 +173,7 @@ public class SoftwareModelTextureBakery {
     }
 
     private static boolean shouldReturnAirForFluid(BlockPos pos, int face) {
-        var fv = Direction.from3DDataValue(face).getUnitVec3i();
+        var fv = Direction.byId(face).getVector();
         int dot = fv.getX()*pos.getX() + fv.getY()*pos.getY() + fv.getZ()*pos.getZ();
         return dot >= 1;
     }
@@ -210,7 +193,7 @@ public class SoftwareModelTextureBakery {
         boolean isBlock = true;
         RenderLayer layer;
         if (state.getBlock() instanceof FluidBlock) {
-            layer = ItemBlockRenderTypes.getRenderLayer(state.getFluidState());
+            layer = RenderLayers.getFluidLayer(state.getFluidState());
             isBlock = false;
         } else {
             if (state.getBlock() instanceof LeavesBlock) {
@@ -222,15 +205,12 @@ public class SoftwareModelTextureBakery {
 
         //TODO: support block model entities
         //BakedBlockEntityModel bbem = null;
-        if (state.hasBlockEntity()) {
+        if (state.getBlock() instanceof net.minecraft.block.BlockEntityProvider) {
             //bbem = BakedBlockEntityModel.bake(state);
         }
 
         {
             this.rasterizer.setBlending(layer == RenderLayer.getTranslucent());
-
-            //var tex = MinecraftClient.getInstance().getTextureManager().getTexture(new Identifier("minecraft", "textures/atlas/blocks.png")).getTexture();
-            //blockTextureId = ((com.mojang.blaze3d.opengl.GlTexture)tex).glId();
         }
 
         boolean isAnyShaded = false;
@@ -286,14 +266,18 @@ public class SoftwareModelTextureBakery {
     }
 
     private static void addView(int i, float pitch, float yaw, float rotation, int flip) {
-        var stack = new MatrixStack();
+        // In 1.20.1 Yarn: MatrixStack uses multiply() instead of mulPose(),
+        // and peek().getPositionMatrix() instead of last().pose()
+        var stack = new net.minecraft.client.util.math.MatrixStack();
         stack.translate(0.5f,0.5f,0.5f);
-        stack.mulPose(makeQuatFromAxisExact(new Vector3f(0,0,1), rotation));
-        stack.mulPose(makeQuatFromAxisExact(new Vector3f(1,0,0), pitch));
-        stack.mulPose(makeQuatFromAxisExact(new Vector3f(0,1,0), yaw));
-        stack.mulPose(new Matrix4f().scale(1-2*(flip&1), 1-(flip&2), 1-((flip>>1)&2)));
+        stack.multiply(makeQuatFromAxisExact(new Vector3f(0,0,1), rotation));
+        stack.multiply(makeQuatFromAxisExact(new Vector3f(1,0,0), pitch));
+        stack.multiply(makeQuatFromAxisExact(new Vector3f(0,1,0), yaw));
+        // Apply scale via direct matrix multiplication
+        var scaleMat = new Matrix4f().scale(1-2*(flip&1), 1-(flip&2), 1-((flip>>1)&2));
+        stack.multiplyPositionMatrix(scaleMat);
         stack.translate(-0.5f,-0.5f,-0.5f);
-        var mat = new Matrix4f(stack.last().pose());
+        var mat = new Matrix4f(stack.peek().getPositionMatrix());
 
         mat = new Matrix4f().set(
                         2,0,0,0,

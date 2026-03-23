@@ -646,7 +646,7 @@ public class ModelManager {
                         int C01 = current[(pY*2+1)*size+pX*2];
                         int C10 = current[(pY*2)*size+pX*2+1];
                         int C11 = current[(pY*2+1)*size+pX*2+1];
-                        next[pY*size+pX] = TextureUtils.mipColours(C00, C01, C10, C11);
+                        next[pY*size+pX] = TextureUtils.mipColours(false, C00, C01, C10, C11);
                     }
                 }
 

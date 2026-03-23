@@ -21,3 +21,5 @@ accessible field net/minecraft/client/network/ClientPlayerInteractionManager net
 
 accessible method net/minecraft/client/render/GameRenderer getFov (Lnet/minecraft/client/render/Camera;FZ)D
 accessible method net/minecraft/client/render/RenderPhase$TextureBase getId ()Ljava/util/Optional;
+
+accessible field net/minecraft/block/StairsBlock baseBlockState Lnet/minecraft/block/BlockState;

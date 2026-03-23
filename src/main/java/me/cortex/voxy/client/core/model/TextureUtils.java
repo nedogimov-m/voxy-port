@@ -250,7 +250,12 @@ public class TextureUtils {
                 r / 4,
                 g / 4,
                 b / 4,
-                darkend ? ((int) a) / 4 : ARGB.linearToSrgbChannel(a / 4)
+                darkend ? ((int) a) / 4 : Math.min(255, Math.max(0, Math.round(a / 4)))
         );
+    }
+
+    // Backward-compatible overload for old ModelManager
+    public static int mipColours(int C00, int C01, int C10, int C11) {
+        return mipColours(false, C00, C01, C10, C11);
     }
 }

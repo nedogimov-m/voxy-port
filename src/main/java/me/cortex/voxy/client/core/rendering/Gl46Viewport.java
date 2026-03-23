@@ -18,6 +18,12 @@ public class Gl46Viewport extends Viewport<Gl46Viewport> {
     }
 
     protected void delete0() {
+        super.delete0();
         this.visibilityBuffer.free();
+    }
+
+    @Override
+    public GlBuffer getRenderList() {
+        throw new UnsupportedOperationException("Legacy viewport does not support getRenderList");
     }
 }

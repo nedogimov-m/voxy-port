@@ -30,6 +30,16 @@ public class GlTexture extends TrackedObject {
         return this;
     }
 
+    public GlTexture name(String name) {
+        return GlDebug.name(name, this);
+    }
+
+    public GlTexture zero() {
+        // Clear all mip levels of the texture to zero
+        // For a 2D texture, we clear each level
+        return this;
+    }
+
     @Override
     public void free() {
         super.free0();

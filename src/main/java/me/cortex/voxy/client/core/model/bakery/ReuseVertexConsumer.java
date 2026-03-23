@@ -26,7 +26,19 @@ public final class ReuseVertexConsumer implements VertexConsumer {
         return this;
     }
 
+    // In 1.20.1, VertexConsumer.vertex takes double params
     @Override
+    public VertexConsumer vertex(double x, double y, double z) {
+        this.ensureCanPut();
+        this.ptr += VERTEX_FORMAT_SIZE; this.count++; //Goto next vertex
+        this.meta(this.defaultMeta);
+        MemoryUtil.memPutFloat(this.ptr, (float) x);
+        MemoryUtil.memPutFloat(this.ptr + 4, (float) y);
+        MemoryUtil.memPutFloat(this.ptr + 8, (float) z);
+        return this;
+    }
+
+    // Float version for internal use
     public ReuseVertexConsumer vertex(float x, float y, float z) {
         this.ensureCanPut();
         this.ptr += VERTEX_FORMAT_SIZE; this.count++; //Goto next vertex
@@ -43,52 +55,68 @@ public final class ReuseVertexConsumer implements VertexConsumer {
     }
 
     @Override
-    public ReuseVertexConsumer color(int red, int green, int blue, int alpha) {
+    public VertexConsumer color(int red, int green, int blue, int alpha) {
         return this;
     }
 
     @Override
-    public VertexConsumer color(int i) {
-        return this;
-    }
-
-    @Override
-    public ReuseVertexConsumer texture(float u, float v) {
+    public VertexConsumer texture(float u, float v) {
         MemoryUtil.memPutFloat(this.ptr + 16, u);
         MemoryUtil.memPutFloat(this.ptr + 20, v);
         return this;
     }
 
     @Override
-    public ReuseVertexConsumer overlay(int u, int v) {
+    public VertexConsumer overlay(int u, int v) {
         return this;
     }
 
     @Override
-    public ReuseVertexConsumer light(int u, int v) {
+    public VertexConsumer light(int u, int v) {
         return this;
     }
 
     @Override
-    public ReuseVertexConsumer normal(float x, float y, float z) {
+    public VertexConsumer normal(float x, float y, float z) {
         return this;
     }
 
     @Override
-    public VertexConsumer lineWidth(float f) {
-        return null;
+    public void next() {
+        // No-op: vertex is already committed in vertex() call
     }
 
+    @Override
+    public void fixedColor(int red, int green, int blue, int alpha) {
+        // No-op
+    }
+
+    @Override
+    public void unfixColor() {
+        // No-op
+    }
+
+    /**
+     * Consume a BakedQuad, extracting position and UV data from its vertex data int[].
+     * In 1.20.1, BakedQuad stores 8 ints per vertex: x,y,z,color,u,v,light,normal
+     */
     public ReuseVertexConsumer quad(BakedQuad quad, int metadata) {
         this.anyShaded |= quad.hasShade();
-        this.anyDarkendTex |= false /* mipmapStrategy not available in 1.20.1 */;
+        // mipmapStrategy not available in 1.20.1
         this.ensureCanPut();
-        for (int i = 0; i < 4; i++) {
-            var pos = quad.position(i);
-            this.vertex(pos.x(), pos.y(), pos.z());
-            long puv = quad.packedUV(i);
-            this.texture(UVPair.unpackU(puv),UVPair.unpackV(puv));
 
+        int[] vertexData = quad.getVertexData();
+        // Each vertex: 8 ints = [x(f), y(f), z(f), color(i), u(f), v(f), light(i), normal(i)]
+        for (int i = 0; i < 4; i++) {
+            int offset = i * 8;
+            float x = Float.intBitsToFloat(vertexData[offset]);
+            float y = Float.intBitsToFloat(vertexData[offset + 1]);
+            float z = Float.intBitsToFloat(vertexData[offset + 2]);
+            float u = Float.intBitsToFloat(vertexData[offset + 4]);
+            float v = Float.intBitsToFloat(vertexData[offset + 5]);
+
+            this.vertex(x, y, z);
+            this.texture(u, v);
             this.meta(metadata);
         }
         return this;
