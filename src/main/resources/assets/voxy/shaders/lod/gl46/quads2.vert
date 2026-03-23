@@ -1,4 +1,5 @@
 #version 430
+#extension GL_ARB_shader_draw_parameters : enable
 #extension GL_ARB_gpu_shader_int64 : enable
 
 #import <voxy:lod/quad_format.glsl>
