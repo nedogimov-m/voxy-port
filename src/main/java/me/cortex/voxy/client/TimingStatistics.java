@@ -24,17 +24,13 @@ public class TimingStatistics {
         }
 
         public void start() {
-            if (this.running) {
-                throw new IllegalStateException();
-            }
+            if (this.running) return; // Already running, ignore duplicate start
             this.running = true;
             this.timestamp = System.nanoTime();
         }
 
         public void stop() {
-            if (!this.running) {
-                throw new IllegalStateException();
-            }
+            if (!this.running) return; // Not running, ignore duplicate stop
             this.running = false;
             this.runtime += System.nanoTime() - this.timestamp;
         }
