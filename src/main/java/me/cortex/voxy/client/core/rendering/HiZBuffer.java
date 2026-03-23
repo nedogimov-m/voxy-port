@@ -15,7 +15,7 @@ import static org.lwjgl.opengl.GL33C.glDeleteSamplers;
 import static org.lwjgl.opengl.GL33C.glSamplerParameteri;
 import static org.lwjgl.opengl.GL42C.GL_FRAMEBUFFER_BARRIER_BIT;
 import static org.lwjgl.opengl.GL42C.glMemoryBarrier;
-import static org.lwjgl.opengl.GL43C.glCopyImageSubData;
+import static org.lwjgl.opengl.GL45C.glBlitNamedFramebuffer;
 import static org.lwjgl.opengl.GL45C.glNamedFramebufferTexture;
 import static org.lwjgl.opengl.GL45C.glTextureBarrier;
 
@@ -25,6 +25,8 @@ public class HiZBuffer {
             .add(ShaderType.FRAGMENT, "voxy:hiz/blit.fsh")
             .compile();
     private final GlFramebuffer fb = new GlFramebuffer();
+    // Temporary framebuffer for reading the source depth texture during blit
+    private final GlFramebuffer srcFb = new GlFramebuffer();
     private final int sampler = glGenSamplers();
     private GlTexture texture;
     private int levels;
@@ -33,6 +35,7 @@ public class HiZBuffer {
 
     public HiZBuffer() {
         glNamedFramebufferDrawBuffer(this.fb.id, GL_NONE);
+        glNamedFramebufferDrawBuffer(this.srcFb.id, GL_NONE);
     }
 
     private void alloc(int width, int height) {
@@ -74,11 +77,26 @@ public class HiZBuffer {
 
         glDepthFunc(GL_ALWAYS);
 
-
-
-        glCopyImageSubData(srcDepthTex, GL_TEXTURE_2D, 0,0,0,0,
-                this.texture.id, GL_TEXTURE_2D, 0,0,0,0,
-                width, height, 1);
+        // Use glBlitNamedFramebuffer instead of glCopyImageSubData to handle
+        // depth format mismatches (e.g. GL_DEPTH24_STENCIL8 source -> GL_DEPTH_COMPONENT32 dest).
+        // glCopyImageSubData requires format-compatible textures which fails here.
+        {
+            // Query source texture's internal format to determine correct attachment point
+            int srcFormat = glGetTextureLevelParameteri(srcDepthTex, 0, GL_TEXTURE_INTERNAL_FORMAT);
+            int attachment = (srcFormat == GL_DEPTH24_STENCIL8 || srcFormat == GL_DEPTH32F_STENCIL8)
+                    ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+            glNamedFramebufferTexture(this.srcFb.id, attachment, srcDepthTex, 0);
+            // Clear the other attachment to avoid incomplete framebuffer
+            if (attachment == GL_DEPTH_STENCIL_ATTACHMENT) {
+                // No need to clear GL_DEPTH_ATTACHMENT separately — DEPTH_STENCIL_ATTACHMENT covers both
+            } else {
+                glNamedFramebufferTexture(this.srcFb.id, GL_STENCIL_ATTACHMENT, 0, 0);
+            }
+        }
+        glBlitNamedFramebuffer(this.srcFb.id, this.fb.id,
+                0, 0, width, height,
+                0, 0, width, height,
+                GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
 
         glBindTextureUnit(0, this.texture.id);
@@ -106,6 +124,7 @@ public class HiZBuffer {
 
     public void free() {
         this.fb.free();
+        this.srcFb.free();
         this.texture.free();
         this.texture = null;
         glDeleteSamplers(this.sampler);

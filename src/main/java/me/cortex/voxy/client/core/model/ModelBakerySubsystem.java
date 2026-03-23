@@ -5,9 +5,6 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import me.cortex.voxy.common.Logger;
 import me.cortex.voxy.common.world.other.Mapper;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ModelBakerySubsystem {
@@ -18,48 +15,23 @@ public class ModelBakerySubsystem {
     public final ModelFactory factory;
     private final Mapper mapper;
 
-    private final Thread processingThread;
-    private volatile boolean isRunning = true;
-    private volatile Throwable processingThreadException;
+    // NOTE: Model baking (processAllThings) must run on the render thread because
+    // bakeBlockModel/bakeFluidState access MinecraftClient.getBlockRenderManager()
+    // which is not thread-safe. Running it on a background thread causes silent failures
+    // resulting in red (unbaked) chunks.
+
     public ModelBakerySubsystem(Mapper mapper) {
         this.mapper = mapper;
         this.factory = new ModelFactory(mapper, this.storage);
-        this.processingThread = new Thread(()->{//TODO replace this with something good/integrate it into the async processor so that we just have less threads overall
-            while (this.isRunning) {
-                this.factory.processAllThings();
-                try {
-                    //TODO: replace with LockSupport.park();
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }, "Model factory processor");
-        this.processingThread.setUncaughtExceptionHandler((t,e)->{
-            this.isRunning = false;
-            if (e == null) {
-                e = new RuntimeException("unhandled excpetion not added");
-            }
-            this.processingThreadException = e;
-        });
-        this.processingThread.start();
     }
 
     public void tick(long totalBudget) {
-        if (this.processingThreadException != null) {
-            throw new RuntimeException(this.processingThreadException);
-        }
+        // Process model baking on the render thread — MC block render APIs are not thread-safe
+        this.factory.processAllThings();
         this.factory.processUploads();
     }
 
     public void shutdown() {
-        this.isRunning = false;
-        try {
-            this.processingThread.join();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
         this.factory.free();
         this.storage.free();
     }
