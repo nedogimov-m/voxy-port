@@ -1,5 +1,6 @@
 package me.cortex.voxy.client.mixin.minecraft;
 
+import me.cortex.voxy.client.VoxyClient;
 import me.cortex.voxy.client.VoxyClientInstance;
 import me.cortex.voxy.client.config.VoxyConfig;
 import me.cortex.voxy.client.core.IGetVoxyRenderSystem;
@@ -87,6 +88,10 @@ public abstract class MixinWorldRenderer implements IGetVoxyRenderSystem {
 
     @Override
     public void createRenderer() {
+        // Ensure GL-dependent initialization (Capabilities, SharedIndexBuffer, etc.)
+        // This is deferred from onInitializeClient because GL context doesn't exist there
+        VoxyClient.ensureInitialized();
+
         if (this.renderer != null) {
             throw new IllegalStateException("Cannot have multiple renderers");
         }

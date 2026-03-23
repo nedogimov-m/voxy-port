@@ -62,9 +62,22 @@ public class VoxyClient implements ClientModInitializer {
         }
     }
 
+    private static volatile boolean initialized = false;
+
+    /**
+     * Called lazily on first render frame when GL context is available.
+     * Cannot be called from onInitializeClient() because GL context doesn't exist yet.
+     */
+    public static void ensureInitialized() {
+        if (!initialized) {
+            initialized = true;
+            initVoxyClient();
+        }
+    }
+
     @Override
     public void onInitializeClient() {
-        initVoxyClient();
+        // GL-dependent init deferred to ensureInitialized(), called from MixinWorldRenderer
 
         //FREX integration
         FabricLoader.getInstance()
