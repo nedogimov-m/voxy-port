@@ -15,8 +15,8 @@ public class AllocationArena {
     private final int SIZE_BITS = 64 - ADDR_BITS;
     private final long SIZE_MSK = (1L<<SIZE_BITS)-1;
     private final long ADDR_MSK = (1L<<ADDR_BITS)-1;
-    private final LongRBTreeSet FREE = new LongRBTreeSet();//Size Address
-    private final LongRBTreeSet TAKEN = new LongRBTreeSet();//Address Size
+    private final LongRBTreeSet FREE = new LongRBTreeSet(Long::compareUnsigned);//Size Address
+    private final LongRBTreeSet TAKEN = new LongRBTreeSet(Long::compareUnsigned);//Address Size
 
     private long sizeLimit = Long.MAX_VALUE;
     private long totalSize;
