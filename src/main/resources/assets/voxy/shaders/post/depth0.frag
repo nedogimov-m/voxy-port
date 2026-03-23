@@ -1,4 +1,4 @@
-#version 330 core
+#version 430
 out vec4 colour;
 in vec2 UV;
 void main() {

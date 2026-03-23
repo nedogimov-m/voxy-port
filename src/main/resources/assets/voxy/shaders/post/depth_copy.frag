@@ -1,4 +1,4 @@
-#version 330 core
+#version 430
 
 uniform sampler2D depthTex;
 layout(location = 1) uniform vec2 scaleFactor;
