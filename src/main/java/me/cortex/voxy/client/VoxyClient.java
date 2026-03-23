@@ -22,15 +22,22 @@ public class VoxyClient implements ClientModInitializer {
     private static FileLock EXCLUSIVE_LOCK;
 
     public static void initVoxyClient() {
+        System.out.println("[Voxy] initVoxyClient() called");
+        me.cortex.voxy.common.config.Serialization.init(); // Must be called before any storage config usage
         Capabilities.init();//Ensure clinit is called
 
+        System.out.println("[Voxy] Capabilities: compute=" + Capabilities.INSTANCE.compute
+            + " indirectParameters=" + Capabilities.INSTANCE.indirectParameters
+            + " hasBrokenDepthSampler=" + Capabilities.INSTANCE.hasBrokenDepthSampler
+            + " subgroup=" + Capabilities.INSTANCE.subgroup);
+
         if (Capabilities.INSTANCE.hasBrokenDepthSampler) {
-            Logger.error("AMD broken depth sampler detected, voxy does not work correctly and has been disabled, this will hopefully be fixed in the future");
+            System.err.println("[Voxy] AMD broken depth sampler detected, disabling");
         }
 
         boolean systemSupported = Capabilities.INSTANCE.compute && Capabilities.INSTANCE.indirectParameters && !Capabilities.INSTANCE.hasBrokenDepthSampler;
         if (!systemSupported) {
-            Logger.error("Voxy is unsupported on your system.");
+            System.err.println("[Voxy] UNSUPPORTED on your system. compute=" + Capabilities.INSTANCE.compute + " indirectParams=" + Capabilities.INSTANCE.indirectParameters);
             return;
         }
 
@@ -71,8 +78,10 @@ public class VoxyClient implements ClientModInitializer {
     public static void ensureInitialized() {
         if (!initialized) {
             initialized = true;
+            System.out.println("[Voxy] ensureInitialized() — first call");
             try {
                 initVoxyClient();
+                System.out.println("[Voxy] initVoxyClient() completed. isAvailable=" + VoxyCommon.isAvailable());
             } catch (Throwable t) {
                 System.err.println("[Voxy] Failed to initialize: " + t.getMessage());
                 t.printStackTrace();
