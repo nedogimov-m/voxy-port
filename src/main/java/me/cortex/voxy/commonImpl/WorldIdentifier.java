@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.WeakHashMap;
 
 public class WorldIdentifier {
     private static final RegistryKey<DimensionType> NULL_DIM_KEY = RegistryKey.of(RegistryKeys.DIMENSION_TYPE, new Identifier("voxy", "null_dimension_id"));
@@ -83,11 +84,28 @@ public class WorldIdentifier {
         return instance.getNullable(this);
     }
 
+    // Lazy WorldIdentifier cache — no mixin needed on World class
+    private static final WeakHashMap<World, WorldIdentifier> WORLD_IDENTIFIERS = new WeakHashMap<>();
+
     public static WorldIdentifier of(World level) {
         if (level == null) {
             return null;
         }
-        return ((IWorldGetIdentifier) level).voxy$getIdentifier();
+        return WORLD_IDENTIFIERS.computeIfAbsent(level, world -> {
+            var key = world.getRegistryKey();
+            long biomeSeed = world.getBiomeAccess().seed;
+            RegistryKey<DimensionType> dimKey = null;
+            try {
+                // Try to get dimension type key from registry entry
+                var dimEntry = world.getDimensionEntry();
+                if (dimEntry != null) {
+                    dimKey = dimEntry.getKey().orElse(null);
+                }
+            } catch (Exception e) {
+                // Fallback: no dimension key
+            }
+            return new WorldIdentifier(key, biomeSeed, dimKey);
+        });
     }
 
     public static WorldEngine ofEngine(World level) {
