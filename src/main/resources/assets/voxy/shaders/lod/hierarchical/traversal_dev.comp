@@ -1,9 +1,9 @@
-#version 430
+#version 440
 
 //TODO: increase local size
 #define LOCAL_SIZE_MSK ((1<<LOCAL_SIZE_BITS)-1)
 #define LOCAL_SIZE (1<<LOCAL_SIZE_BITS)
-layout(local_size_x=LOCAL_SIZE) in;//, local_size_y=1
+layout(local_size_x=32) in;//, local_size_y=1
 
 #import <voxy:lod/frustum.glsl>
 
