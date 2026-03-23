@@ -126,10 +126,22 @@ public class Shader extends TrackedObject {
                 for (var entry : this.sources.entrySet()) {
                     String src = entry.getValue();
 
-                    //Inject defines
-                    src = src.substring(0, src.indexOf('\n')+1) +
-                            defs
-                            + src.substring(src.indexOf('\n')+1);
+                    //Inject defines after #version and all #extension lines
+                    {
+                        int insertPos = src.indexOf('\n') + 1; // after #version line
+                        // Skip past all #extension lines
+                        while (insertPos < src.length()) {
+                            String remaining = src.substring(insertPos);
+                            if (remaining.startsWith("#extension ") || remaining.startsWith("\n") || remaining.startsWith("\r")) {
+                                int nextNl = remaining.indexOf('\n');
+                                if (nextNl == -1) break;
+                                insertPos += nextNl + 1;
+                            } else {
+                                break;
+                            }
+                        }
+                        src = src.substring(0, insertPos) + defs + src.substring(insertPos);
+                    }
 
                     shaders[i++] = createShader(entry.getKey(), src);
                 }
