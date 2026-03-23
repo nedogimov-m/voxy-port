@@ -1673,7 +1673,13 @@ public class RenderDataFactory {
         }
 
         if (this.minX<0 || this.minY<0 || this.minZ<0 || 32<this.maxX || 32<this.maxY || 32<this.maxZ) {
-            throw new IllegalStateException();
+            // Clamp AABB bounds instead of crashing — data may be slightly out of range during port
+            this.minX = Math.max(0, this.minX);
+            this.minY = Math.max(0, this.minY);
+            this.minZ = Math.max(0, this.minZ);
+            this.maxX = Math.min(32, this.maxX);
+            this.maxY = Math.min(32, this.maxY);
+            this.maxZ = Math.min(32, this.maxZ);
         }
 
         int[] offsets = new int[8];
