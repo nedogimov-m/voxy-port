@@ -1,5 +1,4 @@
-#version 430
-#extension GL_ARB_shader_draw_parameters : enable
+#version 460
 #extension GL_ARB_gpu_shader_int64 : enable
 
 #define QUAD_BUFFER_BINDING 1
