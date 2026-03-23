@@ -25,6 +25,11 @@ public class GlFramebuffer extends TrackedObject {
         glDeleteFramebuffers(this.id);
     }
 
+    public GlFramebuffer name(String name) {
+        GlDebug.name(name, this);
+        return this;
+    }
+
     public GlFramebuffer verify() {
         int code;
         if ((code = glCheckNamedFramebufferStatus(this.id, GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {

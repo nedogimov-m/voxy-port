@@ -1,14 +1,16 @@
 package me.cortex.voxy.client.core.rendering;
 
 import me.cortex.voxy.client.core.gl.GlBuffer;
+import me.cortex.voxy.client.core.rendering.util.DepthFramebuffer;
 import net.minecraft.util.math.MathHelper;
 import org.joml.*;
 
 import java.lang.reflect.Field;
 
 public abstract class Viewport <A extends Viewport<A>> {
-    // New hierarchical rendering fields
+    // Hierarchical rendering fields
     public final HiZBuffer hiZBuffer = new HiZBuffer();
+    public final DepthFramebuffer depthBoundingBuffer = new DepthFramebuffer();
 
     private static final Field planesField;
     static {
@@ -23,6 +25,7 @@ public abstract class Viewport <A extends Viewport<A>> {
     public int width;
     public int height;
     public int frameId;
+    public Matrix4f vanillaProjection = new Matrix4f();
     public Matrix4f projection = new Matrix4f();
     public Matrix4f modelView = new Matrix4f();
     public final FrustumIntersection frustum = new FrustumIntersection();
@@ -30,6 +33,7 @@ public abstract class Viewport <A extends Viewport<A>> {
     public double cameraX;
     public double cameraY;
     public double cameraZ;
+    public FogParameters fogParameters;
 
     public final Matrix4f MVP = new Matrix4f();
     public final Vector3i section = new Vector3i();
@@ -70,6 +74,12 @@ public abstract class Viewport <A extends Viewport<A>> {
 
     protected void delete0() {
         this.hiZBuffer.free();
+        this.depthBoundingBuffer.free();
+    }
+
+    public A setVanillaProjection(Matrix4fc projection) {
+        this.vanillaProjection.set(projection);
+        return (A) this;
     }
 
     public A setProjection(Matrix4f projection) {
@@ -92,6 +102,11 @@ public abstract class Viewport <A extends Viewport<A>> {
     public A setScreenSize(int width, int height) {
         this.width = width;
         this.height = height;
+        return (A) this;
+    }
+
+    public A setFogParameters(FogParameters fog) {
+        this.fogParameters = fog;
         return (A) this;
     }
 

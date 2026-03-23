@@ -51,6 +51,10 @@ public class Shader extends TrackedObject {
         glUseProgram(this.id);
     }
 
+    public <T extends Shader> T name(String name) {
+        return (T) me.cortex.voxy.client.core.gl.GlDebug.name(name, this);
+    }
+
     public void free() {
         super.free0();
         glDeleteProgram(this.id);
@@ -104,6 +108,13 @@ public class Shader extends TrackedObject {
         public Builder<T> addSource(ShaderType type, String source) {
             this.sources.put(type, this.processor.process(type, source));
             return this;
+        }
+
+        public Builder<T> clone() {
+            Builder<T> copy = new Builder<>(this.factory, this.processor);
+            copy.defines.putAll(this.defines);
+            copy.sources.putAll(this.sources);
+            return copy;
         }
 
         public T compile() {

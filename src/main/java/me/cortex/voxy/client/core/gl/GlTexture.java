@@ -12,6 +12,9 @@ import static org.lwjgl.opengl.GL45C.glTextureStorage2D;
 public class GlTexture extends TrackedObject {
     public final int id;
     private final int type;
+    private int storedWidth;
+    private int storedHeight;
+
     public GlTexture() {
         this(GL_TEXTURE_2D);
     }
@@ -21,7 +24,12 @@ public class GlTexture extends TrackedObject {
         this.type = type;
     }
 
+    public int getWidth() { return this.storedWidth; }
+    public int getHeight() { return this.storedHeight; }
+
     public GlTexture store(int format, int levels, int width, int height) {
+        this.storedWidth = width;
+        this.storedHeight = height;
         if (this.type == GL_TEXTURE_2D) {
             glTextureStorage2D(this.id, levels, format, width, height);
         } else {
