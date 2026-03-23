@@ -3,10 +3,10 @@ package me.cortex.voxy.client.config;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import me.cortex.voxy.client.core.Capabilities;
-import me.cortex.voxy.client.saver.ContextSelectionSystem;
+import me.cortex.voxy.common.Logger;
+import me.cortex.voxy.common.util.cpu.CpuLayout;
+import me.cortex.voxy.commonImpl.VoxyCommon;
 import net.fabricmc.loader.api.FabricLoader;
-import org.lwjgl.opengl.GL;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -20,45 +20,55 @@ public class VoxyConfig {
             .setPrettyPrinting()
             .excludeFieldsWithModifiers(Modifier.PRIVATE)
             .create();
+
     public static VoxyConfig CONFIG = loadOrCreate();
 
     public boolean enabled = true;
+    public boolean enableRendering = true;
     public boolean ingestEnabled = true;
-    public int qualityScale = 12;
-    public int maxSections = 200_000;
-    public int renderDistance = 128;
-    public int geometryBufferSize = (1<<30)/8;
-    public int ingestThreads = 2;
-    public int savingThreads = 4;
-    public int renderThreads = 5;
-    public boolean useMeshShaderIfPossible = true;
-    public String defaultSaveConfig = ContextSelectionSystem.DEFAULT_STORAGE_CONFIG;
+    public float sectionRenderDistance = 16;
+    public int serviceThreads = (int) Math.max(CpuLayout.getCoreCount() / 1.5, 1);
+    public float subDivisionSize = 64;
+    public boolean useEnvironmentalFog = true;
+    public boolean dontUseSodiumBuilderThreads = false;
 
-
-    public static VoxyConfig loadOrCreate() {
-        var path = getConfigPath();
-        if (Files.exists(path)) {
-            try (FileReader reader = new FileReader(path.toFile())) {
-                var cfg = GSON.fromJson(reader, VoxyConfig.class);
-                if (cfg.defaultSaveConfig == null) {
-                    //Shitty gson being a pain TODO: replace with a proper fix
-                    cfg.defaultSaveConfig = ContextSelectionSystem.DEFAULT_STORAGE_CONFIG;
+    private static VoxyConfig loadOrCreate() {
+        if (VoxyCommon.isAvailable()) {
+            var path = getConfigPath();
+            if (Files.exists(path)) {
+                try (FileReader reader = new FileReader(path.toFile())) {
+                    var conf = GSON.fromJson(reader, VoxyConfig.class);
+                    if (conf != null) {
+                        conf.save();
+                        return conf;
+                    } else {
+                        Logger.error("Failed to load voxy config, resetting");
+                    }
+                } catch (IOException e) {
+                    Logger.error("Could not parse config", e);
                 }
-                return cfg;
-            } catch (IOException e) {
-                System.err.println("Could not parse config");
-                e.printStackTrace();
             }
+            Logger.info("Config doesnt exist, creating new");
+            var config = new VoxyConfig();
+            config.save();
+            return config;
+        } else {
+            var config = new VoxyConfig();
+            config.enabled = false;
+            config.enableRendering = false;
+            return config;
         }
-        return new VoxyConfig();
     }
+
     public void save() {
-        //Unsafe, todo: fixme! needs to be atomic!
+        if (!VoxyCommon.isAvailable()) {
+            Logger.info("Not saving config since voxy is unavailable");
+            return;
+        }
         try {
             Files.writeString(getConfigPath(), GSON.toJson(this));
         } catch (IOException e) {
-            System.err.println("Failed to write config file");
-            e.printStackTrace();
+            Logger.error("Failed to write config file", e);
         }
     }
 
@@ -68,7 +78,7 @@ public class VoxyConfig {
                 .resolve("voxy-config.json");
     }
 
-    public boolean useMeshShaders() {
-        return this.useMeshShaderIfPossible && Capabilities.INSTANCE.meshShaders;
+    public boolean isRenderingEnabled() {
+        return VoxyCommon.isAvailable() && this.enabled && this.enableRendering;
     }
 }

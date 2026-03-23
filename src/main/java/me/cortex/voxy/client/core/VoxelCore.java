@@ -75,13 +75,13 @@ public class VoxelCore {
         System.out.println("Renderer initialized");
 
         this.renderTracker = new RenderTracker(this.world, this.renderer);
-        this.renderGen = new RenderGenerationService(this.world, this.renderer.getModelManager(), VoxyConfig.CONFIG.renderThreads, this.renderTracker::processBuildResult, this.renderer.usesMeshlets());
+        this.renderGen = new RenderGenerationService(this.world, this.renderer.getModelManager(), 5, this.renderTracker::processBuildResult, this.renderer.usesMeshlets());
         this.world.setDirtyCallback(this.renderTracker::sectionUpdated);
         this.renderTracker.setRenderGen(this.renderGen);
         System.out.println("Render tracker and generator initialized");
 
         //To get to chunk scale multiply the scale by 2, the scale is after how many chunks does the lods halve
-        int q = VoxyConfig.CONFIG.qualityScale;
+        int q = 12; // was VoxyConfig.CONFIG.qualityScale, removed in upstream
         int minY = MinecraftClient.getInstance().world.getBottomSectionCoord()/2;
         int maxY = MinecraftClient.getInstance().world.getTopSectionCoord()/2;
 
@@ -93,8 +93,9 @@ public class VoxelCore {
             maxY = cfg.maxYOverride;
         }
 
+        int renderDist = 128; // was VoxyConfig.CONFIG.renderDistance, removed in upstream
         this.distanceTracker = new DistanceTracker(this.renderTracker, new int[]{q,q,q,q},
-                (VoxyConfig.CONFIG.renderDistance<0?VoxyConfig.CONFIG.renderDistance:((VoxyConfig.CONFIG.renderDistance+1)/2)),
+                (renderDist<0?renderDist:((renderDist+1)/2)),
                 minY, maxY);
         System.out.println("Distance tracker initialized");
 
@@ -122,18 +123,10 @@ public class VoxelCore {
     }
 
     private AbstractFarWorldRenderer<?,?> createRenderBackend() {
-        if (false) {
-            System.out.println("Using Gl46MeshletFarWorldRendering");
-            return new Gl46MeshletsFarWorldRenderer(VoxyConfig.CONFIG.geometryBufferSize, VoxyConfig.CONFIG.maxSections);
-        } else {
-            if (VoxyConfig.CONFIG.useMeshShaders()) {
-                System.out.println("Using NvMeshFarWorldRenderer");
-                return new NvMeshFarWorldRenderer(VoxyConfig.CONFIG.geometryBufferSize, VoxyConfig.CONFIG.maxSections);
-            } else {
-                System.out.println("Using Gl46FarWorldRenderer");
-                return new Gl46FarWorldRenderer(VoxyConfig.CONFIG.geometryBufferSize, VoxyConfig.CONFIG.maxSections);
-            }
-        }
+        int geometryBufferSize = (1 << 30) / 8;
+        int maxSections = 200_000;
+        System.out.println("Using Gl46FarWorldRenderer");
+        return new Gl46FarWorldRenderer(geometryBufferSize, maxSections);
     }
 
 

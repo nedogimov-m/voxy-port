@@ -8,12 +8,36 @@ import me.cortex.voxy.common.world.service.VoxelIngestService;
 import me.cortex.voxy.common.storage.StorageBackend;
 import org.lwjgl.system.MemoryUtil;
 
+import me.cortex.voxy.commonImpl.VoxyInstance;
+
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 //Use an LMDB backend to store the world, use a local inmemory cache for lod sections
 // automatically manages and invalidates sections of the world as needed
 public class WorldEngine {
+    public static final int MAX_LOD_LAYER = 4;
+
+    // Lifecycle management for VoxyInstance
+    private volatile boolean live = true;
+    private volatile long lastActiveTime = System.currentTimeMillis();
+    private static final long IDLE_TIMEOUT_MS = 10_000; // 10 seconds
+    private final AtomicInteger refCount = new AtomicInteger(0);
+    public VoxyInstance instanceIn;
+
+    public boolean isLive() { return this.live; }
+    public void markActive() { this.lastActiveTime = System.currentTimeMillis(); }
+    public boolean isWorldIdle() { return this.refCount.get() <= 0 && (System.currentTimeMillis() - this.lastActiveTime) > IDLE_TIMEOUT_MS; }
+    public boolean isWorldUsed() { return this.refCount.get() > 0; }
+    public void acquireRef() { this.refCount.incrementAndGet(); }
+    public void releaseRef() { this.refCount.decrementAndGet(); }
+    public int getActiveSectionCount() { return this.sectionTracker.getCacheCounts()[0]; }
+
+    public void setSaveCallback(Consumer<WorldSection> callback) {
+        // TODO: wire to saving service when ported
+    }
+
     public final StorageBackend storage;
     private final Mapper mapper;
     private final ActiveSectionTracker sectionTracker;
@@ -150,5 +174,10 @@ public class WorldEngine {
         try {this.ingestService.shutdown();} catch (Exception e) {System.err.println(e);}
         try {this.savingService.shutdown();} catch (Exception e) {System.err.println(e);}
         try {this.storage.close();} catch (Exception e) {System.err.println(e);}
+    }
+
+    public void free() {
+        this.live = false;
+        this.shutdown();
     }
 }
