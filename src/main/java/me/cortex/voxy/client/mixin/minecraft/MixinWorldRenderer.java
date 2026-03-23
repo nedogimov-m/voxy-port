@@ -66,6 +66,10 @@ public abstract class MixinWorldRenderer implements IGetVoxyRenderSystem {
             return;
         }
 
+        // Lazy init: register instance factory, check GPU caps, etc.
+        // Must happen before isAvailable() check since it sets the factory.
+        VoxyClient.ensureInitialized();
+
         // Joining new world: ensure VoxyCommon instance exists
         if (VoxyCommon.isAvailable() && VoxyConfig.CONFIG.enabled) {
             if (VoxyCommon.getInstance() == null) {
