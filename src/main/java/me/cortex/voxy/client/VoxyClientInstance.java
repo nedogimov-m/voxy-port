@@ -46,6 +46,17 @@ public class VoxyClientInstance extends VoxyInstance {
         ctx.setProperty(ConfigBuildCtx.WORLD_IDENTIFIER, worldId);
         ctx.pushPath(ConfigBuildCtx.DEFAULT_STORAGE_PATH);
 
+        // Delete stale RocksDB LOCK file if present (previous instance didn't clean up)
+        try {
+            var lockFile = path.resolve("storage").resolve("LOCK");
+            if (Files.exists(lockFile)) {
+                Logger.warn("Deleting stale RocksDB LOCK file: " + lockFile);
+                Files.delete(lockFile);
+            }
+        } catch (Exception e) {
+            Logger.error("Failed to delete stale LOCK file", e);
+        }
+
         // Load or create storage config
         StorageConfig storageConfig = loadOrCreateStorageConfig(path);
         StorageBackend storage = storageConfig.build(ctx);
