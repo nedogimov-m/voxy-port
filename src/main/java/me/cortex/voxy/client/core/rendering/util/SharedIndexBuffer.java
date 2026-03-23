@@ -4,6 +4,9 @@ import me.cortex.voxy.client.core.gl.GlBuffer;
 import me.cortex.voxy.common.util.MemoryBuffer;
 import org.lwjgl.system.MemoryUtil;
 
+import static org.lwjgl.opengl.GL30.glGenVertexArrays;
+import static org.lwjgl.opengl.GL45C.glVertexArrayElementBuffer;
+
 
 //Has a base index buffer of 16380 quads, and also a 1 cube byte index buffer at the end
 public class SharedIndexBuffer {
@@ -13,6 +16,19 @@ public class SharedIndexBuffer {
     public static final SharedIndexBuffer INSTANCE_BB_BYTE = new SharedIndexBuffer(true, true);
 
     private final GlBuffer indexBuffer;
+    private int vao = -1;
+
+    /**
+     * Returns a VAO with this index buffer bound as the element buffer.
+     * Created lazily on first call.
+     */
+    public int getVao() {
+        if (this.vao == -1) {
+            this.vao = glGenVertexArrays();
+            glVertexArrayElementBuffer(this.vao, this.indexBuffer.id);
+        }
+        return this.vao;
+    }
 
     public SharedIndexBuffer() {
         this.indexBuffer = new GlBuffer((1<<16)*6*2 + 6*2*3);

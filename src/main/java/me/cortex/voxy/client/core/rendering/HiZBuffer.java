@@ -66,7 +66,7 @@ public class HiZBuffer {
             }
             this.alloc(width, height);
         }
-        glBindVertexArray(AbstractFarWorldRenderer.STATIC_VAO);
+        glBindVertexArray(me.cortex.voxy.client.core.rendering.util.SharedIndexBuffer.INSTANCE.getVao());
         int boundFB = GL11.glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
         this.hiz.bind();
         this.fb.bind(GL_DEPTH_ATTACHMENT, this.texture, 0).verify();

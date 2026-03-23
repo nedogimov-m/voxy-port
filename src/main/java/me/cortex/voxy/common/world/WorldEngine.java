@@ -101,6 +101,13 @@ public class WorldEngine {
         return this.sectionTracker.acquire(lvl, x, y, z, true);
     }
 
+    /**
+     * Acquire a section by packed position key. Returns null if the section doesn't exist.
+     */
+    public WorldSection acquireIfExists(long pos) {
+        return this.acquireIfExists(getLevel(pos), getX(pos), getY(pos), getZ(pos));
+    }
+
     public WorldSection acquire(int lvl, int x, int y, int z) {
         return this.sectionTracker.acquire(lvl, x, y, z, false);
     }

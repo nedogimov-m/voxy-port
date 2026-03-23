@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 //Represents a loaded world section at a specific detail level
 // holds a 32x32x32 region of detail
 public final class WorldSection {
+    public static final int RELEASE_HINT_POSSIBLE_REUSE = 1;
     private static final int ARRAY_REUSE_CACHE_SIZE = 256;
     //TODO: maybe just swap this to a ConcurrentLinkedDeque
     private static final Deque<long[]> ARRAY_REUSE_CACHE = new ArrayDeque<>(1024);
@@ -117,6 +118,23 @@ public final class WorldSection {
         long old = this.data[idx];
         this.data[idx] = id;
         return old;
+    }
+
+    /**
+     * Returns the raw internal data array without copying.
+     * WARNING: Not thread-safe! The caller must ensure proper synchronization.
+     */
+    public long[] _unsafeGetRawDataArray() {
+        this.assertNotFree();
+        return this.data;
+    }
+
+    /**
+     * Release with a hint parameter. The hint is currently ignored but
+     * matches the upstream API (RELEASE_HINT_POSSIBLE_REUSE = 1).
+     */
+    public int release(int hint) {
+        return this.release();
     }
 
     //Generates a copy of the data array, this is to help with atomic operations like rendering

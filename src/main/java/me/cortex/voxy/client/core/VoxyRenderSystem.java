@@ -108,9 +108,7 @@ public class VoxyRenderSystem {
 
             {
                 this.modelService = new ModelBakerySubsystem(world.getMapper());
-                // TODO: Phase 6 - upstream VoxyRenderSystem uses ModelBakerySubsystem but our RenderGenerationService expects ModelManager
-                // Pass null for ModelManager and consumer; AsyncNodeManager will set the consumer via setResultConsumer
-                this.renderGen = new RenderGenerationService(world, null, 4, null, false);
+                this.renderGen = new RenderGenerationService(world, this.modelService, sm, false);
 
                 this.geometryData = new BasicSectionGeometryData(1<<20, RenderResourceReuse.getOrCreateGeometryBuffer());
 

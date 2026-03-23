@@ -39,23 +39,7 @@ public abstract class Viewport <A extends Viewport<A>> {
     public final Vector3i section = new Vector3i();
     public final Vector3f innerTranslation = new Vector3f();
 
-    // Legacy field for old rendering system
-    private final AbstractFarWorldRenderer renderer;
-
-    protected Viewport(AbstractFarWorldRenderer renderer) {
-        this.renderer = renderer;
-        Vector4f[] planes = null;
-        try {
-             planes = (Vector4f[]) planesField.get(this.frustum);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-        this.frustumPlanes = planes;
-    }
-
-    // Constructor for new hierarchical system (no renderer needed)
     protected Viewport() {
-        this.renderer = null;
         Vector4f[] planes = null;
         try {
              planes = (Vector4f[]) planesField.get(this.frustum);
@@ -67,9 +51,6 @@ public abstract class Viewport <A extends Viewport<A>> {
 
     public final void delete() {
         this.delete0();
-        if (this.renderer != null) {
-            this.renderer.removeViewport((A) this);
-        }
     }
 
     protected void delete0() {

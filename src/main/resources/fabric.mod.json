@@ -20,9 +20,7 @@
       "me.cortex.voxy.client.Voxy",
       "me.cortex.voxy.client.VoxyClient"
     ],
-    "modmenu": [
-      "me.cortex.voxy.client.config.VoxyConfigScreenFactory"
-    ]
+    "modmenu": []
   },
   "mixins": [
     "voxy.mixins.json"
