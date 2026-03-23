@@ -228,7 +228,7 @@ void main() {
 uint hash = (uint(tile.x)*(1<<16))^uint(tile.y);
 uint horiz = subgroupQuadSwapHorizontal(hash);
 bool sameTile = horiz==hash;
-uint sv = mix(uint(-1), hash, sameTile);
+uint sv = sameTile ? hash : uint(-1);
 uint vert = subgroupQuadSwapVertical(sv);
 sameTile = sameTile&&vert==hash;
 mipBias = sameTile?0:-5.0;

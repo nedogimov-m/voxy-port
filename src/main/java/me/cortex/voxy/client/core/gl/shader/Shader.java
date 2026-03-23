@@ -178,6 +178,13 @@ public class Shader extends TrackedObject {
             int result = GL20C.glGetShaderi(shader, GL20C.GL_COMPILE_STATUS);
 
             if (result != GL20C.GL_TRUE) {
+                // Dump full shader source for debugging
+                String[] lines = src.split("\n");
+                System.err.println("=== FAILED SHADER SOURCE (type=" + type.name() + ") ===");
+                for (int ln = 0; ln < lines.length; ln++) {
+                    System.err.println(String.format("%4d: %s", ln + 1, lines[ln]));
+                }
+                System.err.println("=== END SHADER SOURCE ===");
                 GL20C.glDeleteShader(shader);
 
                 throw new RuntimeException("Shader compilation failed of type " + type.name() + ", see log for details");
