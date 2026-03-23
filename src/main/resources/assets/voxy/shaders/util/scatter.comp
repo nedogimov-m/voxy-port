@@ -5,15 +5,15 @@ layout(local_size_x=128) in;
 //In data is layed out in chunks, 4 dest locations (packed into a uvec4) followed by 4 data values, each a uvec4
 // meaning each chunk is 5 uvec4's or 80 bytes
 layout(binding = INPUT_BUFFER_BINDING, std430) restrict readonly buffer InputBuffer {
-    uvec4[] inData;
+    uvec4 inData[];
 };
 
 layout(binding = OUTPUT_BUFFER1_BINDING, std430) restrict writeonly buffer OutputBuffer1 {
-    uvec4[] output1;
+    uvec4 output1[];
 };
 
 layout(binding = OUTPUT_BUFFER2_BINDING, std430) restrict writeonly buffer OutputBuffer2 {
-    uvec4[] output2;
+    uvec4 output2[];
 };
 
 layout(location=0) uniform uint count;

@@ -20,7 +20,7 @@ layout(local_size_x = 128) in;
     */
 
 layout(binding = TRANSLUCENT_DISTANCE_BUFFER_BINDING, std430) restrict buffer TranslucentCommandCount {
-    uint[] translucentCommandData;
+    uint translucentCommandData[];
 };
 
 void writeCmd(uint idx, uint instance, uint offset, uint quadCount) {

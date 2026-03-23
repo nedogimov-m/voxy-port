@@ -27,17 +27,17 @@ layout(binding = SCENE_UNIFORM_BINDING, std140) uniform SceneUniform {
 //SIMPLE_QUEUE(uvec2, requestQueue, REQUEST_QUEUE_BINDING);
 layout(binding = REQUEST_QUEUE_BINDING, std430) restrict buffer requestQueueStruct {
     uvec2 requestQueueIndex;
-    uvec2[] requestQueue;
+    uvec2 requestQueue[];
 };
 
 //SIMPLE_QUEUE(uint, renderQueue, RENDER_QUEUE_BINDING);
 layout(binding = RENDER_QUEUE_BINDING, std430) restrict buffer renderQueueStruct {
     uint renderQueueIndex;
-    uint[] renderQueue;
+    uint renderQueue[];
 };
 
 layout(binding = RENDER_TRACKER_BINDING, std430) restrict writeonly buffer renderTrackerArray {
-    uint[] lastRenderFrame;
+    uint lastRenderFrame[];
 };
 
 #ifdef HAS_STATISTICS

@@ -7,7 +7,7 @@ layout(binding = 0, std140) uniform SceneUniform {
 };
 
 layout(binding = 1, std430) restrict readonly buffer ChunkPosBuffer {
-    ivec2[] chunkPos;
+    ivec2 chunkPos[];
 };
 
 ivec3 unpackPos(ivec2 pos) {

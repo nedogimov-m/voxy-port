@@ -3,11 +3,11 @@
 layout(local_size_x=128) in;
 
 layout(binding = VISIBILITY_BUFFER_BINDING, std430) restrict writeonly buffer VisibilityDataBuffer {
-    uint[] visiblity;
+    uint visiblity[];
 };
 
 layout(binding = LIST_BUFFER_BINDING, std430) restrict readonly buffer SetListBuffer {
-    uint[] ids;
+    uint ids[];
 };
 
 layout(location=0) uniform uint count;

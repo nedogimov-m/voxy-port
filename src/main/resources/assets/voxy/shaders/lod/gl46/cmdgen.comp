@@ -34,7 +34,7 @@ layout(binding = STATISTICS_BUFFER_BINDING, std430) restrict buffer statisticsBu
     */
 
 layout(binding = TRANSLUCENT_DISTANCE_BUFFER_BINDING, std430) restrict buffer TranslucentCommandCount {
-    uint[] translucentCommandData;
+    uint translucentCommandData[];
 };
 
 //Note: if i want reverse indexing i need to use the index buffer offset to offset

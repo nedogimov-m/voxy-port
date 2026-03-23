@@ -5,7 +5,7 @@
 layout(local_size_x=WORK_SIZE) in;
 
 layout(binding = IO_BUFFER, std430) buffer InputBuffer {
-    uvec4[] ioCount;
+    uvec4 ioCount[];
 };
 
 shared uint prefixSum[256];

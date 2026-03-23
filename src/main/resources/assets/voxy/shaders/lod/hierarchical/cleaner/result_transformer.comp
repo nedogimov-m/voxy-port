@@ -6,7 +6,7 @@ layout(binding = MIN_ID_BUFFER_BINDING, std430) restrict readonly buffer Visibil
 };
 
 layout(binding = NODE_BUFFER_BINDING, std430) restrict readonly buffer NodeData {
-    uvec4[] nodes;
+    uvec4 nodes[];
 };
 
 layout(binding = OUTPUT_BUFFER_BINDING, std430) restrict writeonly buffer OutputBuffer {
@@ -14,7 +14,7 @@ layout(binding = OUTPUT_BUFFER_BINDING, std430) restrict writeonly buffer Output
 };
 
 layout(binding = VISIBILITY_BUFFER_BINDING, std430) restrict buffer VisibilityBuffer {
-    uint[] visibility;
+    uint visibility[];
 };
 
 layout(location=0) uniform uint visibilityCounter;

@@ -7,11 +7,11 @@ layout(binding = NODE_QUEUE_META_BINDING, std430) restrict buffer NodeQueueMeta 
 };
 
 layout(binding = NODE_QUEUE_SOURCE_BINDING, std430) restrict readonly buffer NodeQueueSource {
-    uint[] nodeQueueSource;
+    uint nodeQueueSource[];
 };
 
 layout(binding = NODE_QUEUE_SINK_BINDING, std430) restrict writeonly buffer NodeQueueSink {
-    uint[] nodeQueueSink;
+    uint nodeQueueSink[];
 };
 
 uint getCurrentNode() {

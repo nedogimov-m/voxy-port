@@ -4,15 +4,15 @@ layout(local_size_x=WORK_SIZE) in;
 
 //Header data about destination, size and location of what is being copied (NOTE: can probably make it a uvec2?)
 layout(binding = INPUT_HEADER_BUFFER_BINDING, std430) restrict readonly buffer InputHeaderBuffer {
-    uvec4[] dataCopyHeader;
+    uvec4 dataCopyHeader[];
 };
 
 layout(binding = INPUT_DATA_BUFFER_BINDING, std430) restrict readonly buffer InputDataBuffer {
-    uvec2[] dataInBuffer;
+    uvec2 dataInBuffer[];
 };
 
 layout(binding = OUTPUT_BUFFER_BINDING, std430) restrict writeonly buffer OutputBuffer {
-    uvec2[] outputBuffer;
+    uvec2 outputBuffer[];
 };
 
 void main() {

@@ -10,7 +10,7 @@ layout(local_size_x=WORK_SIZE, local_size_y=1) in;
 #import <voxy:lod/hierarchical/node.glsl>
 
 layout(binding = VISIBILITY_BUFFER_BINDING, std430) restrict readonly buffer VisibilityDataBuffer {
-    uint[] visibility;
+    uint visibility[];
 };
 
 layout(binding = OUTPUT_BUFFER_BINDING, std430) restrict volatile buffer MinimumVisibilityBuffer {//TODO: might need to be volatile
