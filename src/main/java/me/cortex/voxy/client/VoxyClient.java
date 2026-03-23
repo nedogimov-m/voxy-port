@@ -66,12 +66,17 @@ public class VoxyClient implements ClientModInitializer {
 
     /**
      * Called lazily on first render frame when GL context is available.
-     * Cannot be called from onInitializeClient() because GL context doesn't exist yet.
+     * Cannot be called from entrypoints because GL context doesn't exist yet.
      */
     public static void ensureInitialized() {
         if (!initialized) {
             initialized = true;
-            initVoxyClient();
+            try {
+                initVoxyClient();
+            } catch (Throwable t) {
+                System.err.println("[Voxy] Failed to initialize: " + t.getMessage());
+                t.printStackTrace();
+            }
         }
     }
 

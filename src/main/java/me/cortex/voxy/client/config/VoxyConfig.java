@@ -4,7 +4,7 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import me.cortex.voxy.common.Logger;
-import me.cortex.voxy.common.util.cpu.CpuLayout;
+// CpuLayout removed from VoxyConfig to avoid JNA/OSHI class loading crash on Flatpak
 import me.cortex.voxy.commonImpl.VoxyCommon;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -27,7 +27,7 @@ public class VoxyConfig {
     public boolean enableRendering = true;
     public boolean ingestEnabled = true;
     public float sectionRenderDistance = 16;
-    public int serviceThreads = (int) Math.max(CpuLayout.getCoreCount() / 1.5, 1);
+    public int serviceThreads = (int) Math.max(Runtime.getRuntime().availableProcessors() / 1.5, 1);
     public float subDivisionSize = 64;
     public boolean useEnvironmentalFog = true;
     public boolean dontUseSodiumBuilderThreads = false;

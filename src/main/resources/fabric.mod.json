@@ -13,14 +13,9 @@
   "icon": "assets/voxy/icon.png",
   "environment": "client",
   "entrypoints": {
-    "main": [
-      "me.cortex.voxy.commonImpl.VoxyCommon"
-    ],
     "client": [
-      "me.cortex.voxy.client.Voxy",
-      "me.cortex.voxy.client.VoxyClient"
-    ],
-    "modmenu": []
+      "me.cortex.voxy.client.Voxy"
+    ]
   },
   "mixins": [
     "voxy.mixins.json"

@@ -162,10 +162,11 @@ public class CpuLayout {
     }
 
     public static int getCoreCount() {
-        if (CORES==null) {
-            return Runtime.getRuntime().availableProcessors();
-        } else {
-            return CORES.length;
-        }
+        try {
+            if (CORES != null) {
+                return CORES.length;
+            }
+        } catch (Throwable ignored) {}
+        return Runtime.getRuntime().availableProcessors();
     }
 }
