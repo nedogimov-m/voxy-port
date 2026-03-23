@@ -145,7 +145,7 @@ void main() {
     //Trying it with all shaders
     //#ifdef PATCHED_SHADER
     #ifndef PATCHED_SHADER_ALLOW_DERIVATIVES
-    if (gl_HelperInvocation) {
+    if (false) { // gl_HelperInvocation requires GLSL 450+ (Mesa 430 compat)
         return;
     }
     #endif
@@ -180,7 +180,7 @@ void main() {
     }
 
     #ifndef PATCHED_SHADER_ALLOW_DERIVATIVES
-    if (gl_HelperInvocation) {
+    if (false) { // gl_HelperInvocation requires GLSL 450+ (Mesa 430 compat)
         return;
     }
     #endif
