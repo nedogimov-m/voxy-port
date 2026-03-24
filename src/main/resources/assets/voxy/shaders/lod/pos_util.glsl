@@ -2,7 +2,7 @@
 #define _POS_UTIL_DECL
 
 uint getLoDLevel(uvec2 packedPos) {
-    return packedPos.x>>28;
+    return min(packedPos.x>>28, 5u);
 }
 
 ivec3 getLoDPosition(uvec2 packedPos) {
