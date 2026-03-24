@@ -129,6 +129,7 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
         this.terrainShader = tryCompilePatchedOrNormal(builder, opaqueFrag, frag);
         // Set sampler bindings (layout(binding=N) removed for Mesa Intel compat, use glUniform1i instead)
         this.terrainShader.setSampler("blockModelAtlas", 0);
+        this.terrainShader.setSampler("lightSampler", 1);
         this.terrainShader.setSampler("depthTex", 2);
 
         String translucentFrag = pipeline.patchTranslucentShader(this, frag);
@@ -136,6 +137,7 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
 
         this.translucentTerrainShader = tryCompilePatchedOrNormal(builder.define("TRANSLUCENT"), translucentFrag, frag);
         this.translucentTerrainShader.setSampler("blockModelAtlas", 0);
+        this.translucentTerrainShader.setSampler("lightSampler", 1);
         this.translucentTerrainShader.setSampler("depthTex", 2);
 
         if (this.pipeline.hasTAA()) {

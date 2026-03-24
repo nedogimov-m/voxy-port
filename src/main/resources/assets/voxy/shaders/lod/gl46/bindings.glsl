@@ -94,7 +94,7 @@ layout(binding = POSITION_SCRATCH_BINDING, std430) POSITION_SCRATCH_ACCESS restr
 
 #ifdef LIGHTING_SAMPLER_BINDING
 
-layout(binding = LIGHTING_SAMPLER_BINDING) uniform sampler2D lightSampler;
+uniform sampler2D lightSampler;
 
 vec4 getLighting(uint index) {
     int i2 = int(index);
