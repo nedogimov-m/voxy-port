@@ -261,10 +261,10 @@ public class VoxyRenderSystem {
         this.pipeline.preSetup(viewport);
 
         // TODO: Phase 6 - TimingStatistics stripped
+        viewport.depthBoundingBuffer.resize(viewport.width, viewport.height);
         if ((!VoxyClient.disableSodiumChunkRender())&&!IrisUtil.irisShadowActive()) {
             this.chunkBoundRenderer.render(viewport);
         } else {
-            viewport.depthBoundingBuffer.resize(viewport.width, viewport.height);
             viewport.depthBoundingBuffer.clear(0);
         }
         // TODO: Phase 6 - TimingStatistics stripped

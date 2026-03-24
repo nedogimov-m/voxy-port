@@ -88,7 +88,6 @@ public class ChunkBoundRenderer {
 
         if (this.chunk2idx.isEmpty() && this.addQueue.isEmpty()) return;
 
-        viewport.depthBoundingBuffer.resize(viewport.width, viewport.height);
         viewport.depthBoundingBuffer.clear(0);
 
         long ptr = UploadStream.INSTANCE.upload(this.uniformBuffer, 0, 128);
