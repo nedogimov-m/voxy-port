@@ -8,6 +8,8 @@ public class GlFramebuffer extends TrackedObject {
     public final int id;
     public GlFramebuffer() {
         this.id = glCreateFramebuffers();
+        // DSA framebuffers default draw buffer to GL_NONE — set to COLOR_ATTACHMENT0
+        glNamedFramebufferDrawBuffer(this.id, GL_COLOR_ATTACHMENT0);
     }
 
     public GlFramebuffer bind(int attachment, GlTexture texture) {
