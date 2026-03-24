@@ -318,11 +318,16 @@ public class AsyncNodeManager {
             job.free();
         } while (true);
 
-        int remaining = this.workCounter.addAndGet(-workDone);
-        if (remaining < 0) {
-            // Reset to 0 to prevent permanent negative state
-            this.workCounter.compareAndSet(remaining, 0);
-            Logger.warn("Work counter went negative (" + remaining + "), reset to 0");
+        if (this.workCounter.addAndGet(-workDone) < 0) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            //Due to synchronization "issues", wait a millis (give up this time slice)
+            if (this.workCounter.get() < 0) {
+                Logger.error("Work counter less than zero, hope it fixes itself...");
+            }
         }
 
         if (workDone == 0) {//Nothing happened, which is odd, but just return
