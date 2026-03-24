@@ -42,7 +42,8 @@ public class RenderResourceReuse {
                         Integer.numberOfTrailingZeros(ModelFactory.MODEL_TEXTURE_SIZE),
                         ModelFactory.MODEL_TEXTURE_SIZE*3*256,
                         ModelFactory.MODEL_TEXTURE_SIZE*2*256)
-                    .name("ModelTextures");
+                    .name("ModelTextures")
+                    .zero(); // Clear to black/transparent — uninitialized memory shows as red on some GPUs
         }
         return atlas;
     }

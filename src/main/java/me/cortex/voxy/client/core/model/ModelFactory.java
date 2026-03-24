@@ -239,6 +239,19 @@ public class ModelFactory {
                 }
             }
 
+            // Debug: check bake output for first 10 blocks
+            if (bake.blockId > 0 && bake.blockId <= 10) {
+                int totalNonZero = 0;
+                for (int face = 0; face < 6; face++) {
+                    for (int c : textureData[face].colour()) if (c != 0) totalNonZero++;
+                }
+                System.out.println("[Voxy DEBUG] Bake blockId=" + bake.blockId +
+                    " state=" + bake.state +
+                    " flags=" + flags +
+                    " totalNonZeroColour=" + totalNonZero +
+                    " shaded=" + isShaded + " darkened=" + hasDarkenedTextures);
+            }
+
             var bakeResult = this.processTextureBakeResult(bake.blockId, bake.state, textureData, isShaded, hasDarkenedTextures);
             if (bakeResult != null) {
                 this.uploadResults.add(bakeResult);
@@ -280,6 +293,7 @@ public class ModelFactory {
         while (this.processModelResult());
     }
 
+    private int uploadCount = 0;
     public void processUploads() {
         var upload = this.uploadResults.poll();
         if (upload==null) return;
@@ -288,12 +302,19 @@ public class ModelFactory {
         glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
         glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        int batch = 0;
         do {
             upload.upload(this.storage);
             upload.free();
+            batch++;
             upload = this.uploadResults.poll();
         } while (upload != null);
         UploadStream.INSTANCE.commit();
+        uploadCount += batch;
+        System.out.println("[Voxy DEBUG] processUploads: batch=" + batch + " total=" + uploadCount +
+            " modelTexCount=" + this.modelTexture2id.size() +
+            " storeTex=" + (this.storage.textures != null ? this.storage.textures.id : "null") +
+            " storeModel=" + (this.storage.modelBuffer != null ? this.storage.modelBuffer.id : "null"));
     }
 
     private interface ResultUploader {
@@ -373,7 +394,8 @@ public class ModelFactory {
 
             clientFluidStateId = this.idMappings[fluidStateId];
             if (clientFluidStateId == -1) {
-                throw new IllegalStateException("Block has a fluid state but fluid state is not already baked!!!");
+                // Fluid state not yet baked — skip this block, will be retried
+                return null;
             }
         }
 
