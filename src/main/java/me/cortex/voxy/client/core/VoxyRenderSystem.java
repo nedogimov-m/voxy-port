@@ -116,7 +116,10 @@ public class VoxyRenderSystem {
                 this.nodeCleaner = new NodeCleaner(this.nodeManager);
                 this.traversal = new HierarchicalOcclusionTraverser(this.nodeManager, this.nodeCleaner, this.renderGen);
 
-                world.setDirtyCallback(section -> this.nodeManager.worldEvent(section, WorldEngine.DEFAULT_UPDATE_FLAGS, 0));
+                // Use BLOCK_BIT only — CHILD_EXISTENCE_BIT triggers processChildChange which crashes
+                // on inner nodes with existing children. 0xFF fallback in makeLeafChildRequest
+                // handles subdivision without needing child existence updates.
+                world.setDirtyCallback(section -> this.nodeManager.worldEvent(section, WorldEngine.UPDATE_TYPE_BLOCK_BIT, 0));
 
                 Arrays.stream(world.getMapper().getBiomeEntries()).forEach(this.modelService::addBiome);
                 world.getMapper().setCallbacks(null, this.modelService::addBiome);
