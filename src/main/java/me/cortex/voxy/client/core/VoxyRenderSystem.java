@@ -116,7 +116,7 @@ public class VoxyRenderSystem {
                 this.nodeCleaner = new NodeCleaner(this.nodeManager);
                 this.traversal = new HierarchicalOcclusionTraverser(this.nodeManager, this.nodeCleaner, this.renderGen);
 
-                world.setDirtyCallback(section -> this.nodeManager.worldEvent(section, 0, 0));
+                world.setDirtyCallback(section -> this.nodeManager.worldEvent(section, WorldEngine.DEFAULT_UPDATE_FLAGS, 0));
 
                 Arrays.stream(world.getMapper().getBiomeEntries()).forEach(this.modelService::addBiome);
                 world.getMapper().setCallbacks(null, this.modelService::addBiome);
