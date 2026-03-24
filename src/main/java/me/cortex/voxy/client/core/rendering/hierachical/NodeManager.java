@@ -1141,10 +1141,23 @@ public class NodeManager {
         byte childExistence = this.nodeData.getNodeChildExistence(nodeId);
 
         if (childExistence == 0) {
-            // BuiltSection with correct childExistence may not have been uploaded
-            // to GPU yet. Use 0xFF (all children) as fallback — empty children
-            // will be pruned when their mesh generation completes.
-            childExistence = (byte) 0xFF;
+            // childExistence=0 in NodeStore means either:
+            // a) BuiltSection hasn't uploaded yet (race condition) → use 0xFF fallback
+            // b) Section is genuinely empty → don't create children
+            // For top-level nodes, always use fallback (they must expand).
+            // For others, check if node has real geometry.
+            if (this.topLevelNodes.contains(pos)) {
+                childExistence = (byte) 0xFF;
+            } else {
+                int geo = this.nodeData.getNodeGeometry(nodeId);
+                if (geo != NULL_GEOMETRY_ID && geo != EMPTY_GEOMETRY_ID) {
+                    childExistence = (byte) 0xFF;
+                } else {
+                    this.nodeData.unmarkRequestInFlight(nodeId);
+                    this.invalidateNode(nodeId);
+                    return;
+                }
+            }
         }
 
         //Enqueue a leaf expansion request
