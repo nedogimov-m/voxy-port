@@ -156,11 +156,24 @@ public class WorldEngine {
     //Executes an update to the world and automatically updates all the parent mip layers up to level 4 (e.g. where 1 chunk section is 1 block big)
     public void insertUpdate(VoxelizedSection section) {
         //The >>1 is cause the world sections size is 32x32x32 vs the 16x16x16 of the voxelized section
+        WorldSection previousSection = null;
+        boolean shouldCheckEmptiness = false;
         for (int lvl = 0; lvl < this.maxMipLevels; lvl++) {
             int sx = section.x >> (lvl + 1);
             int sy = section.y >> (lvl + 1);
             int sz = section.z >> (lvl + 1);
             var worldSection = this.acquire(lvl, sx, sy, sz);
+
+            // Propagate child existence from previous level
+            if (lvl != 0 && shouldCheckEmptiness && previousSection != null) {
+                int emptyChange = worldSection.updateEmptyChildState(previousSection);
+                previousSection.release();
+                previousSection = null;
+                if (emptyChange != 0) {
+                    this.markDirty(worldSection, UPDATE_TYPE_CHILD_EXISTENCE_BIT, 0);
+                }
+            }
+
             boolean didChange = false;
             try {
                 int msk = (1<<(lvl+1))-1;
@@ -179,31 +192,34 @@ public class WorldEngine {
             } finally {
                 if (didChange) {
                     this.markDirty(worldSection);
+                    shouldCheckEmptiness = true;
+                    previousSection = worldSection;
+                    // Don't release — will be used next iteration for updateEmptyChildState
+                } else {
+                    worldSection.release();
                 }
-                worldSection.release();
             }
 
-            // Update parent's nonEmptyChildren bitmask so the hierarchy can subdivide
-            if (lvl + 1 <= MAX_LOD_LAYER) {
-                int px = sx >> 1;
-                int py = sy >> 1;
-                int pz = sz >> 1;
-                int childIdx = (sx & 1) | ((sy & 1) << 1) | ((sz & 1) << 2);
-                var parent = this.acquire(lvl + 1, px, py, pz);
+            if (!didChange && !shouldCheckEmptiness) {
+                break;
+            }
+        }
+        // Release last held section
+        if (previousSection != null) {
+            // Still need to propagate to parent of last level
+            int lastLvl = this.maxMipLevels - 1;
+            if (lastLvl + 1 <= MAX_LOD_LAYER) {
+                var parent = this.acquire(lastLvl + 1, previousSection.x >> 1, previousSection.y >> 1, previousSection.z >> 1);
                 try {
-                    byte oldMask = parent.nonEmptyChildren;
-                    parent.nonEmptyChildren |= (byte) (1 << childIdx);
-                    if (parent.nonEmptyChildren != oldMask) {
+                    int emptyChange = parent.updateEmptyChildState(previousSection);
+                    if (emptyChange != 0) {
                         this.markDirty(parent, UPDATE_TYPE_CHILD_EXISTENCE_BIT, 0);
                     }
                 } finally {
                     parent.release();
                 }
             }
-
-            if (!didChange) {
-                break;
-            }
+            previousSection.release();
         }
     }
 

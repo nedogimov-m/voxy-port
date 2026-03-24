@@ -149,8 +149,31 @@ public final class WorldSection {
         System.arraycopy(this.data, 0, cache, 0, this.data.length);
     }
 
+    public static final int SECTION_SIZE = 32;
+    public static final int SECTION_VOLUME = SECTION_SIZE * SECTION_SIZE * SECTION_SIZE;
+
     public byte getNonEmptyChildren() {
         return this.nonEmptyChildren;
+    }
+
+    /**
+     * Update the nonEmptyChildren bitmask of this section based on the emptiness
+     * of a child section. Returns: 0 = no change, 1 = child became empty, 2 = child became non-empty.
+     */
+    public int updateEmptyChildState(WorldSection child) {
+        int childIdx = (child.x & 1) | ((child.y & 1) << 1) | ((child.z & 1) << 2);
+        boolean childHasData = false;
+        for (long val : child.data) {
+            if (val != 0) { childHasData = true; break; }
+        }
+        byte oldMask = this.nonEmptyChildren;
+        if (childHasData) {
+            this.nonEmptyChildren |= (byte) (1 << childIdx);
+        } else {
+            this.nonEmptyChildren &= (byte) ~(1 << childIdx);
+        }
+        if (oldMask == this.nonEmptyChildren) return 0;
+        return childHasData ? 2 : 1;
     }
 
     public boolean tryAcquire() {
