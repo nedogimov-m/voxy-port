@@ -34,7 +34,8 @@ public class ModelBakerySubsystem {
             System.out.println("[Voxy ModelBakery] tick #" + tickCount +
                 " inflight=" + this.factory.getInflightCount() +
                 " baked=" + this.factory.getBakedCount() +
-                " seenIds=" + this.seenIds.size());
+                " requested=" + this.seenCount +
+                " queueSize=" + this.factory.getBakeQueueSize());
         }
     }
 
@@ -43,27 +44,22 @@ public class ModelBakerySubsystem {
         this.storage.free();
     }
 
-    //This is on this side only and done like this as only worker threads call this code
-    private final ReentrantLock seenIdsLock = new ReentrantLock();
+    //Simplified: addEntry already handles deduplication via idMappings and blockStatesInFlight
     private final ReentrantLock enqueueLock = new ReentrantLock();
-    private final IntOpenHashSet seenIds = new IntOpenHashSet(6000);//TODO: move to a lock free concurrent hashmap
     private int requestCount = 0;
+    private int seenCount = 0;
     public void requestBlockBake(int blockId) {
-        if (requestCount++ < 5) {
+        if (requestCount++ < 10) {
             System.out.println("[Voxy] requestBlockBake: blockId=" + blockId + " stateCount=" + this.mapper.getBlockStateCount());
         }
         if (this.mapper.getBlockStateCount() < blockId) {
-            Logger.error("Error, got bakeing request for out of range state id. StateId: " + blockId + " max id: " + this.mapper.getBlockStateCount(), new Exception());
+            Logger.error("Error, got baking request for out of range state id. StateId: " + blockId + " max id: " + this.mapper.getBlockStateCount(), new Exception());
             return;
         }
-        this.seenIdsLock.lock();
-        if (!this.seenIds.add(blockId)) {
-            this.seenIdsLock.unlock();
-            return;
-        }
-        this.seenIdsLock.unlock();
         this.enqueueLock.lock();
-        this.factory.addEntry(blockId);
+        if (this.factory.addEntry(blockId)) {
+            seenCount++;
+        }
         this.enqueueLock.unlock();
     }
 

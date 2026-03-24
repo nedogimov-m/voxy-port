@@ -240,11 +240,11 @@ public class ModelFactory {
                 this.uploadResults.add(bakeResult);
             }
         } catch (Throwable t) {
-            // If baking fails, register a dummy mapping so sections don't wait forever
             System.err.println("[Voxy] Failed to bake model for blockId=" + bake.blockId + " state=" + bake.state + ": " + t.getMessage());
-            if (this.idMappings[bake.blockId] == -1) {
-                this.idMappings[bake.blockId] = 0; // Map to air/empty model
-            }
+            // Remove from in-flight so it can be re-requested
+            this.blockStatesInFlightLock.lock();
+            this.blockStatesInFlight.remove(bake.blockId);
+            this.blockStatesInFlightLock.unlock();
         }
         return !this.bakeQueue.isEmpty();
     }
@@ -896,6 +896,10 @@ public class ModelFactory {
 
     public int getBakedCount() {
         return this.modelTexture2id.size();
+    }
+
+    public int getBakeQueueSize() {
+        return this.bakeQueue.size();
     }
 
     public int getInflightCount() {
