@@ -139,6 +139,8 @@ public class HierarchicalOcclusionTraverser {
                 .ssbo("NODE_QUEUE_META_BINDING", this.queueMetaBuffer)
                 .ssbo("RENDER_TRACKER_BINDING", this.nodeCleaner.visibilityBuffer)
                 .ssboIf("STATISTICS_BUFFER_BINDING", this.statisticsBuffer);
+        // Set sampler binding (layout(binding=N) removed for Mesa Intel compat)
+        this.traversal.setSampler("hizDepthSampler", 0);
     }
 
     private void addTLN(int id) {

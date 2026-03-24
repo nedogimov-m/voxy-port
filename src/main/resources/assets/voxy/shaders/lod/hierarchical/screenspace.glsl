@@ -12,7 +12,7 @@
 // substantually for performance (for both persistent threads and incremental)
 
 
-layout(binding = HIZ_BINDING) uniform sampler2D hizDepthSampler;
+uniform sampler2D hizDepthSampler;
 
 //TODO: maybe do spher bounds aswell? cause they have different accuracies but are both over estimates (liberals (non conservative xD))
 // so can do &&
