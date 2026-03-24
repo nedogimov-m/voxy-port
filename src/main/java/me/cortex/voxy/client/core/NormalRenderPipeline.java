@@ -52,6 +52,11 @@ public class NormalRenderPipeline extends AbstractRenderPipeline {
         this.useEnvFog = VoxyConfig.CONFIG.useEnvironmentalFog;
         this.finalBlit = new FullscreenBlit("voxy:post/blit_texture_depth_cutout.frag",
                 a->a.defineIf("USE_ENV_FOG", this.useEnvFog).define("EMIT_COLOUR"));
+        // Set sampler bindings (layout(binding=N) removed for Mesa Intel compat, use glUniform1i instead)
+        this.finalBlit.setSampler("depthTex", 0);
+        this.finalBlit.setSampler("colourTex", 3);
+        this.ssaoCompute.setSampler("depthTex", 1);
+        this.ssaoCompute.setSampler("colourTex", 2);
     }
 
     @Override

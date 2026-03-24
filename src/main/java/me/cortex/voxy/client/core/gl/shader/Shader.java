@@ -51,6 +51,20 @@ public class Shader extends TrackedObject {
         glUseProgram(this.id);
     }
 
+    /**
+     * Set a named sampler uniform to the given texture unit.
+     * Must be called after compilation. Values persist for the program lifetime.
+     */
+    public void setSampler(String name, int textureUnit) {
+        int loc = GL20C.glGetUniformLocation(this.id, name);
+        if (loc != -1) {
+            int prev = GL20C.glGetInteger(GL20C.GL_CURRENT_PROGRAM);
+            GL20C.glUseProgram(this.id);
+            GL20C.glUniform1i(loc, textureUnit);
+            GL20C.glUseProgram(prev);
+        }
+    }
+
     public <T extends Shader> T name(String name) {
         return (T) me.cortex.voxy.client.core.gl.GlDebug.name(name, this);
     }

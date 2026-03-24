@@ -50,4 +50,8 @@ public class FullscreenBlit {
     public void delete() {
         this.shader.free();
     }
+
+    public void setSampler(String name, int textureUnit) {
+        this.shader.setSampler(name, textureUnit);
+    }
 }

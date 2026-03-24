@@ -16,6 +16,7 @@ import me.cortex.voxy.client.core.util.GPUTiming;
 import me.cortex.voxy.common.util.TrackedObject;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL30;
+import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
 import java.util.List;
@@ -43,6 +44,7 @@ import static org.lwjgl.opengl.GL42.*;
 import static org.lwjgl.opengl.GL45.glClearNamedFramebufferfi;
 import static org.lwjgl.opengl.GL45.glGetNamedFramebufferAttachmentParameteri;
 import static org.lwjgl.opengl.GL45C.glBindTextureUnit;
+import static org.lwjgl.opengl.GL45C.glClearNamedFramebufferfv;
 
 public abstract class AbstractRenderPipeline extends TrackedObject {
     private final BooleanSupplier frexStillHasWork;
@@ -66,6 +68,7 @@ public abstract class AbstractRenderPipeline extends TrackedObject {
     }
 
     protected AbstractRenderPipeline(AsyncNodeManager nodeManager, NodeCleaner nodeCleaner, HierarchicalOcclusionTraverser traversal, BooleanSupplier frexSupplier, boolean deferTranslucency) {
+        this.depthStencilSetup.setSampler("depthTex", 0);
         this.frexStillHasWork = frexSupplier;
         this.nodeManager = nodeManager;
         this.nodeCleaner = nodeCleaner;
@@ -129,6 +132,10 @@ public abstract class AbstractRenderPipeline extends TrackedObject {
 
     protected void initDepthStencil(int sourceFrameBuffer, int targetFb, int srcWidth, int srcHeight, int width, int height) {
         glClearNamedFramebufferfi(targetFb, GL_DEPTH_STENCIL, 0, 1.0f, 1);
+        // Clear colour attachment to transparent black — prevents VRAM garbage (red artifacts)
+        try (var stack = MemoryStack.stackPush()) {
+            glClearNamedFramebufferfv(targetFb, GL_COLOR, 0, stack.floats(0f, 0f, 0f, 0f));
+        }
         // using blit to copy depth from mismatched depth formats is not portable so instead a full screen pass is performed for a depth copy
         // the mismatched formats in this case is the d32 to d24s8
         glBindFramebuffer(GL30.GL_FRAMEBUFFER, targetFb);
