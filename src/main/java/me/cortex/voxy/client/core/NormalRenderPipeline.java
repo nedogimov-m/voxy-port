@@ -151,6 +151,8 @@ public class NormalRenderPipeline extends AbstractRenderPipeline {
     @Override
     public void setupAndBindOpaque(Viewport<?> viewport) {
         this.fb.bind();
+        // Ensure draw buffer is set every frame (Named FBOs default to GL_NONE)
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
     }
 
     @Override
