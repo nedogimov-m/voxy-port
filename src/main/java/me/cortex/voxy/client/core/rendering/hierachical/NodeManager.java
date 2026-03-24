@@ -1164,6 +1164,10 @@ public class NodeManager {
                 this.invalidateNode(nodeId);
                 return;
             }
+            // Top-level nodes: BuiltSection may not have been uploaded yet,
+            // so childExistence in NodeStore is still 0. Use 0xFF (all children)
+            // as fallback — empty children will be detected later.
+            childExistence = (byte) 0xFF;
         }
 
         //Enqueue a leaf expansion request
