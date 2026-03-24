@@ -50,7 +50,6 @@ public class SoftwareModelTextureBakery {
                 .getTexture(new Identifier("minecraft", "textures/atlas/blocks.png"));
 
         int texId = atlasTexture.getGlId();
-        System.out.println("[Voxy] setupTexture: atlasTexId=" + texId);
 
         // Get texture dimensions via GL45 DSA
         int[] w = new int[1], h = new int[1];
@@ -68,6 +67,12 @@ public class SoftwareModelTextureBakery {
             int[] texture = new int[width * height];
             buffer.asIntBuffer().get(texture);
 
+            // Check if texture is valid
+            int nonZero = 0;
+            for (int i = 0; i < Math.min(1000, texture.length); i++) {
+                if (texture[i] != 0) nonZero++;
+            }
+            System.out.println("[Voxy] setupTexture: texId=" + texId + " size=" + width + "x" + height + " nonZeroPixels(first1000)=" + nonZero);
             this.rasterizer.setSamplerTexture(texture, width, height);
         } finally {
             MemoryUtil.memFree(buffer);

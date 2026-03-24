@@ -114,6 +114,11 @@ vec4 computeColour(vec2 texturePos, vec4 colour) {
 
 
 void main() {
+    // Discard fragments with model ID 0 (air/unmapped blocks) — renders transparent instead of red
+    if (getModelId() == 0u) {
+        discard;
+    }
+
     //vec2 uv = vec2(0);
     //Tile is the tile we are in
     vec2 tile;
