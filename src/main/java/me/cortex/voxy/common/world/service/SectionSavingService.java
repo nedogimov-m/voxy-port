@@ -42,24 +42,14 @@ public class SectionSavingService {
             if (!this.running) break;
             var section = this.saveQueue.pop();
             section.assertNotFree();
-            java.nio.ByteBuffer saveData = null;
             try {
                 section.inSaveQueue.set(false);
-                saveData = SaveLoadSystem.serialize(section);
+                var saveData = SaveLoadSystem.serialize(section);
                 this.world.storage.setSectionData(section.key, saveData);
+                MemoryUtil.memFree(saveData);
             } catch (Exception e) {
-                System.err.println("[Voxy] Saver exception: " + e.getMessage());
-                e.printStackTrace();
-                try {
-                    MinecraftClient.getInstance().executeSync(()->{
-                        var player = MinecraftClient.getInstance().player;
-                        if (player != null) {
-                            player.sendMessage(Text.literal("Voxy saver had an exception, check logs"));
-                        }
-                    });
-                } catch (Exception ignored) {}
-            } finally {
-                if (saveData != null) MemoryUtil.memFree(saveData);
+                System.err.println(e);
+                MinecraftClient.getInstance().executeSync(()->MinecraftClient.getInstance().player.sendMessage(Text.literal("Voxy saver had an exception while executing please check logs and report error")));
             }
             section.release();
         }
@@ -93,15 +83,11 @@ public class SectionSavingService {
 
 
         int i = 0;
-        //Wait for all the saving to finish (with timeout)
-        while (!this.saveQueue.isEmpty() || this.saveCounter.availablePermits() != 0) {
+        //Wait for all the saving to finish
+        while (this.saveCounter.availablePermits() != 0) {
             try {Thread.sleep(500);} catch (InterruptedException e) {break;}
-            if (i++%20 == 0) {
-                System.out.println("[Voxy] Saving shutdown: " + this.saveQueue.size() + " queued, " + this.saveCounter.availablePermits() + " permits");
-            }
-            if (i > 60) { // 30 second timeout
-                System.err.println("[Voxy] Saving shutdown timeout, forcing stop");
-                break;
+            if (i++%10 == 0) {
+                System.out.println("Section saving shutdown has " + this.saveCounter.availablePermits() + " tasks remaining");
             }
         }
         //Shutdown
