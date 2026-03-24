@@ -241,7 +241,11 @@ public class HierarchicalOcclusionTraverser {
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, RENDER_QUEUE_BINDING, viewport.getRenderList().id);
     }
 
+    private static int _debugTraversalCount = 0;
     public void doTraversal(Viewport<?> viewport) {
+        if (++_debugTraversalCount <= 10 || _debugTraversalCount % 300 == 0) {
+            System.out.println("[Voxy DEBUG] doTraversal #" + _debugTraversalCount + " topNodes=" + this.topNodeCount);
+        }
         this.uploadUniform(viewport);
         //UploadStream.INSTANCE.commit(); //Done inside traversal
 
@@ -354,8 +358,12 @@ public class HierarchicalOcclusionTraverser {
         nglClearNamedBufferSubData(this.requestBuffer.id, GL_R32UI, 0, 4, GL_RED_INTEGER, GL_UNSIGNED_INT, 0);
     }
 
+    private static int _debugForwardCount = 0;
     private void forwardDownloadResult(long ptr, long size) {
         int count = MemoryUtil.memGetInt(ptr);ptr += 8;//its 8 since we need to skip the second value (which is empty)
+        if (++_debugForwardCount <= 20 || _debugForwardCount % 100 == 0) {
+            System.out.println("[Voxy DEBUG] forwardDownloadResult: count=" + count + " size=" + size + " total=" + _debugForwardCount);
+        }
         if (count < 0 || count > 50000) {
             Logger.error(new IllegalStateException("Count unexpected extreme value: " + count + " things may get weird"));
             return;
