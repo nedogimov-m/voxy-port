@@ -52,12 +52,11 @@ public class WorldEngine {
     private final ActiveSectionTracker sectionTracker;
     public final VoxelIngestService ingestService;
     public final SectionSavingService savingService;
-    public interface ISectionChangeCallback { void accept(WorldSection section, int updateFlags, int neighborMsk); }
-    private ISectionChangeCallback dirtyCallback;
+    private Consumer<WorldSection> dirtyCallback;
     private final int maxMipLevels;
 
 
-    public void setDirtyCallback(ISectionChangeCallback tracker) {
+    public void setDirtyCallback(Consumer<WorldSection> tracker) {
         this.dirtyCallback = tracker;
     }
 
@@ -138,12 +137,8 @@ public class WorldEngine {
 
     //Marks a section as dirty, enqueuing it for saving and or render data rebuilding
     public void markDirty(WorldSection section) {
-        this.markDirty(section, DEFAULT_UPDATE_FLAGS, 0);
-    }
-
-    public void markDirty(WorldSection section, int updateFlags, int neighborMsk) {
         if (this.dirtyCallback != null) {
-            this.dirtyCallback.accept(section, updateFlags, neighborMsk);
+            this.dirtyCallback.accept(section);
         }
         //TODO: add an option for having synced saving, that is when call enqueueSave, that will instead, instantly
         // save to the db, this can be useful for just reducing the amount of thread pools in total
@@ -183,21 +178,19 @@ public class WorldEngine {
                 worldSection.release();
             }
 
-            // Update parent's nonEmptyChildren bitmask
+            // Update parent's nonEmptyChildren bitmask (just set the bit, no markDirty)
             if (didChange && lvl + 1 <= MAX_LOD_LAYER) {
                 int px = sx >> 1;
                 int py = sy >> 1;
                 int pz = sz >> 1;
                 int childIdx = (sx & 1) | ((sy & 1) << 1) | ((sz & 1) << 2);
-                var parent = this.acquire(lvl + 1, px, py, pz);
-                try {
-                    byte oldMask = parent.nonEmptyChildren;
-                    parent.nonEmptyChildren |= (byte) (1 << childIdx);
-                    if (parent.nonEmptyChildren != oldMask) {
-                        this.markDirty(parent, UPDATE_TYPE_CHILD_EXISTENCE_BIT, 0);
+                var parent = this.acquireIfExists(lvl + 1, px, py, pz);
+                if (parent != null) {
+                    try {
+                        parent.nonEmptyChildren |= (byte) (1 << childIdx);
+                    } finally {
+                        parent.release();
                     }
-                } finally {
-                    parent.release();
                 }
             }
 
