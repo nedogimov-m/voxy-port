@@ -1714,13 +1714,10 @@ public class RenderDataFactory {
      * Compute child existence bitmask by scanning section data for non-air blocks
      * in each of the 8 child octants (16x16x16 each within the 32x32x32 section).
      */
-    private static int _debugComputeCount = 0;
     private static byte computeChildExistence(WorldSection section) {
         byte mask = 0;
         long[] data = section._unsafeGetRawDataArray();
         if (data == null) return 0;
-        int nonZeroTotal = 0;
-        for (long v : data) if (v != 0) nonZeroTotal++;
         // Octant i = (x&1, y&1, z&1) where x,y,z are half-indices
         // child 0=(0,0,0) child 1=(1,0,0) child 2=(0,1,0) ... child 7=(1,1,1)
         for (int child = 0; child < 8; child++) {
@@ -1743,9 +1740,6 @@ public class RenderDataFactory {
             if (hasData) {
                 mask |= (byte) (1 << child);
             }
-        }
-        if (++_debugComputeCount <= 30) {
-            System.out.println("[Voxy DEBUG] computeChildExistence: lvl=" + section.lvl + " pos=(" + section.x + "," + section.y + "," + section.z + ") nonZero=" + nonZeroTotal + " mask=" + (mask & 0xFF));
         }
         return mask;
     }

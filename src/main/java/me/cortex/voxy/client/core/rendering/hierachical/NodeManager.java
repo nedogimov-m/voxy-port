@@ -888,12 +888,7 @@ public class NodeManager {
                 this.nodeData.setNodePosition(childNodeId, childPos);
                 byte childExistence = request.getChildChildExistence(childIdx);
                 if (childExistence == 0) {
-                    //This is an ok error if it happens the request with a child state should never be zero
-
-
-                    //TODO: make into warning or log error
-                    //throw new IllegalStateException("Request result with child existence of 0");
-                    Logger.warn("Request result with child existence of 0, for child pos " + WorldEngine.pprintPos(childPos));
+                    // Normal for empty sections (sky/void). Not an error.
                 }
                 this.nodeData.setNodeChildExistence(childNodeId, childExistence);
                 this.nodeData.setNodeGeometry(childNodeId, request.getChildMesh(childIdx));
@@ -1066,17 +1061,10 @@ public class NodeManager {
     }
 
     //==================================================================================================================
-    private static int _debugRequestCount = 0;
     public void processRequest(long pos) {
         int nodeId = this.activeSectionMap.get(pos);
         if (nodeId == -1) {
-            if (++_debugRequestCount <= 10) {
-                System.out.println("[Voxy DEBUG] processRequest: pos " + WorldEngine.pprintPos(pos) + " NOT in active map, ignoring");
-            }
             return;
-        }
-        if (++_debugRequestCount <= 20 || _debugRequestCount % 200 == 0) {
-            System.out.println("[Voxy DEBUG] processRequest: pos " + WorldEngine.pprintPos(pos) + " nodeId=" + (nodeId & 0xFFFFF) + " type=" + (nodeId >> 20) + " total=" + _debugRequestCount);
         }
         int nodeType = nodeId&NODE_TYPE_MSK;
         nodeId &= NODE_ID_MSK;
@@ -1148,14 +1136,9 @@ public class NodeManager {
         }
     }
 
-    private static int _debugLeafRequestCount = 0;
     private void makeLeafChildRequest(int nodeId) {
         long pos = this.nodeData.nodePosition(nodeId);
         byte childExistence = this.nodeData.getNodeChildExistence(nodeId);
-
-        if (++_debugLeafRequestCount <= 20 || _debugLeafRequestCount % 200 == 0) {
-            System.out.println("[Voxy DEBUG] makeLeafChildRequest nodeId=" + nodeId + " pos=" + WorldEngine.pprintPos(pos) + " childExistence=" + (childExistence & 0xFF) + " isTopLevel=" + this.topLevelNodes.contains(pos) + " total=" + _debugLeafRequestCount);
-        }
 
         if (childExistence == 0) {
             // BuiltSection with correct childExistence may not have been uploaded
