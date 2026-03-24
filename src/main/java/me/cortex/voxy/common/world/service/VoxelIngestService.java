@@ -85,8 +85,16 @@ public class VoxelIngestService {
                     this.totalIngestedSections.incrementAndGet();
                 }
             } catch (Exception e) {
-                System.err.println(e);
-                MinecraftClient.getInstance().executeSync(()->MinecraftClient.getInstance().player.sendMessage(Text.literal("Voxy ingester had an exception while executing please check logs and report error")));
+                System.err.println("[Voxy] Ingest exception: " + e.getMessage());
+                e.printStackTrace();
+                try {
+                    MinecraftClient.getInstance().executeSync(()->{
+                        var player = MinecraftClient.getInstance().player;
+                        if (player != null) {
+                            player.sendMessage(Text.literal("Voxy ingester had an exception, check logs"));
+                        }
+                    });
+                } catch (Exception ignored) {}
             }
         }
     }
@@ -163,9 +171,14 @@ public class VoxelIngestService {
             System.err.println("Some ingest workers already dead on shutdown! this is very very bad, check log for errors from this thread");
         }
 
-        //Wait for the ingest to finish
+        //Wait for the ingest to finish (with timeout to prevent infinite hang)
+        int waitAttempts = 0;
         while (this.ingestCounter.availablePermits() != 0) {
-            Thread.onSpinWait();
+            try { Thread.sleep(100); } catch (InterruptedException e) { break; }
+            if (++waitAttempts > 100) { // 10 second timeout
+                System.err.println("[Voxy] Ingest shutdown timeout, " + this.ingestCounter.availablePermits() + " tasks remaining");
+                break;
+            }
         }
         //Shutdown
         this.running = false;
