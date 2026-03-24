@@ -161,6 +161,9 @@ public class RenderGenerationService {
         section.assertNotFree();
         BuiltSection mesh = null;
 
+        // Proactively request baking for all unknown blocks in this section
+        // This ensures models are requested even if generateMesh succeeds with dummy mappings
+        this.computeAndRequestRequiredModels(seenMissedIds, section);
 
         try {
             mesh = factory.generateMesh(section);

@@ -50,6 +50,7 @@ public class SoftwareModelTextureBakery {
                 .getTexture(new Identifier("minecraft", "textures/atlas/blocks.png"));
 
         int texId = atlasTexture.getGlId();
+        System.out.println("[Voxy] setupTexture: atlasTexId=" + texId);
 
         // Get texture dimensions via GL45 DSA
         int[] w = new int[1], h = new int[1];

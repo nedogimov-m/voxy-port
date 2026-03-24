@@ -209,39 +209,42 @@ public class ModelFactory {
     private boolean processModelResult() {
         var bake = this.bakeQueue.poll();
         if (bake == null) return false;
-        ColourDepthTextureData[] textureData = new ColourDepthTextureData[6];
 
-        int flags = this.bakery2.renderToOutput(bake.state, this.bakeScratchBuffer);
+        try {
+            ColourDepthTextureData[] textureData = new ColourDepthTextureData[6];
 
-        boolean hasDarkenedTextures = (flags&2)!=0;
-        boolean isShaded = (flags&1)!=0;
+            int flags = this.bakery2.renderToOutput(bake.state, this.bakeScratchBuffer);
 
-        {//Create texture data
-            long ptr = this.bakeScratchBuffer;
-            //long ptr = result.rawData.address;
-            final int FACE_SIZE = MODEL_TEXTURE_SIZE * MODEL_TEXTURE_SIZE;
-            for (int face = 0; face < 6; face++) {
-                long faceDataPtr = ptr + (FACE_SIZE * 4) * face * 2;
-                int[] colour = new int[FACE_SIZE];
-                int[] depth = new int[FACE_SIZE];
+            boolean hasDarkenedTextures = (flags & 2) != 0;
+            boolean isShaded = (flags & 1) != 0;
 
-                //Copy out colour
-                for (int i = 0; i < FACE_SIZE; i++) {
-                    ////De-interpolate results
-                    //colour[i] = MemoryUtil.memGetInt(faceDataPtr + (i * 4 * 2));
-                    //depth[i] = MemoryUtil.memGetInt(faceDataPtr + (i * 4 * 2) + 4);
+            {//Create texture data
+                long ptr = this.bakeScratchBuffer;
+                final int FACE_SIZE = MODEL_TEXTURE_SIZE * MODEL_TEXTURE_SIZE;
+                for (int face = 0; face < 6; face++) {
+                    long faceDataPtr = ptr + (FACE_SIZE * 4) * face * 2;
+                    int[] colour = new int[FACE_SIZE];
+                    int[] depth = new int[FACE_SIZE];
 
-                    long value = MemoryUtil.memGetLong(faceDataPtr+i*8);
-                    colour[i] = (int)value;
-                    depth[i] = (int) (value>>>32);
+                    for (int i = 0; i < FACE_SIZE; i++) {
+                        long value = MemoryUtil.memGetLong(faceDataPtr + i * 8);
+                        colour[i] = (int) value;
+                        depth[i] = (int) (value >>> 32);
+                    }
+                    textureData[face] = new ColourDepthTextureData(colour, depth, MODEL_TEXTURE_SIZE, MODEL_TEXTURE_SIZE);
                 }
-                textureData[face] = new ColourDepthTextureData(colour, depth, MODEL_TEXTURE_SIZE, MODEL_TEXTURE_SIZE);
             }
-        }
 
-        var bakeResult = this.processTextureBakeResult(bake.blockId, bake.state, textureData, isShaded, hasDarkenedTextures);
-        if (bakeResult!=null) {
-            this.uploadResults.add(bakeResult);
+            var bakeResult = this.processTextureBakeResult(bake.blockId, bake.state, textureData, isShaded, hasDarkenedTextures);
+            if (bakeResult != null) {
+                this.uploadResults.add(bakeResult);
+            }
+        } catch (Throwable t) {
+            // If baking fails, register a dummy mapping so sections don't wait forever
+            System.err.println("[Voxy] Failed to bake model for blockId=" + bake.blockId + " state=" + bake.state + ": " + t.getMessage());
+            if (this.idMappings[bake.blockId] == -1) {
+                this.idMappings[bake.blockId] = 0; // Map to air/empty model
+            }
         }
         return !this.bakeQueue.isEmpty();
     }

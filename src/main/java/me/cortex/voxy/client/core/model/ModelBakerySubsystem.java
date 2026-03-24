@@ -25,10 +25,17 @@ public class ModelBakerySubsystem {
         this.factory = new ModelFactory(mapper, this.storage);
     }
 
+    private int tickCount = 0;
     public void tick(long totalBudget) {
         // Process model baking on the render thread — MC block render APIs are not thread-safe
         this.factory.processAllThings();
         this.factory.processUploads();
+        if (tickCount++ % 300 == 0) { // Every ~5 seconds at 60fps
+            System.out.println("[Voxy ModelBakery] tick #" + tickCount +
+                " inflight=" + this.factory.getInflightCount() +
+                " baked=" + this.factory.getBakedCount() +
+                " seenIds=" + this.seenIds.size());
+        }
     }
 
     public void shutdown() {
@@ -40,7 +47,11 @@ public class ModelBakerySubsystem {
     private final ReentrantLock seenIdsLock = new ReentrantLock();
     private final ReentrantLock enqueueLock = new ReentrantLock();
     private final IntOpenHashSet seenIds = new IntOpenHashSet(6000);//TODO: move to a lock free concurrent hashmap
+    private int requestCount = 0;
     public void requestBlockBake(int blockId) {
+        if (requestCount++ < 5) {
+            System.out.println("[Voxy] requestBlockBake: blockId=" + blockId + " stateCount=" + this.mapper.getBlockStateCount());
+        }
         if (this.mapper.getBlockStateCount() < blockId) {
             Logger.error("Error, got bakeing request for out of range state id. StateId: " + blockId + " max id: " + this.mapper.getBlockStateCount(), new Exception());
             return;
