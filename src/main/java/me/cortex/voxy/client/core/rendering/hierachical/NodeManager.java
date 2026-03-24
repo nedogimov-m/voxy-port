@@ -1158,15 +1158,9 @@ public class NodeManager {
         }
 
         if (childExistence == 0) {
-            if (!this.topLevelNodes.contains(pos)) {//Top level nodes are special, as they can have a request with child existence of 0 for performance reasons
-                Logger.warn("Not creating a leaf request with existence mask of 0 at pos", WorldEngine.pprintPos(pos));
-                this.nodeData.unmarkRequestInFlight(nodeId);
-                this.invalidateNode(nodeId);
-                return;
-            }
-            // Top-level nodes: BuiltSection may not have been uploaded yet,
-            // so childExistence in NodeStore is still 0. Use 0xFF (all children)
-            // as fallback — empty children will be detected later.
+            // BuiltSection with correct childExistence may not have been uploaded
+            // to GPU yet. Use 0xFF (all children) as fallback — empty children
+            // will be pruned when their mesh generation completes.
             childExistence = (byte) 0xFF;
         }
 
