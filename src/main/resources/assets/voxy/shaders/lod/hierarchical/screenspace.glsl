@@ -188,10 +188,3 @@ bool shouldDecend() {
     return _screenSize > minSSS;
 }
 
-// DEBUG: override isCulledByHiz to never cull LOD 0 nodes
-// This tests if HiZ culling incorrectly kills fine detail
-bool isCulledByHiz_override() {
-    if (node22.lodLevel == 0) return false;
-    return isCulledByHiz();
-}
-

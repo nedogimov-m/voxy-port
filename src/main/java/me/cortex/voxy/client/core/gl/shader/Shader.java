@@ -63,7 +63,6 @@ public class Shader extends TrackedObject {
             GL20C.glUniform1i(loc, textureUnit);
             GL20C.glUseProgram(prev);
         }
-        System.out.println("[Voxy] setSampler program=" + this.id + " name=" + name + " unit=" + textureUnit + " loc=" + loc);
     }
 
     public <T extends Shader> T name(String name) {

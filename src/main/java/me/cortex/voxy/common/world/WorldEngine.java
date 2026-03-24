@@ -179,18 +179,16 @@ public class WorldEngine {
             }
 
             // Update parent's nonEmptyChildren bitmask so the hierarchy can subdivide
-            if (lvl + 1 < this.maxMipLevels) {
+            if (lvl + 1 <= MAX_LOD_LAYER) {
                 int px = sx >> 1;
                 int py = sy >> 1;
                 int pz = sz >> 1;
                 int childIdx = (sx & 1) | ((sy & 1) << 1) | ((sz & 1) << 2);
-                var parent = this.acquireIfExists(lvl + 1, px, py, pz);
-                if (parent != null) {
-                    try {
-                        parent.nonEmptyChildren |= (byte) (1 << childIdx);
-                    } finally {
-                        parent.release();
-                    }
+                var parent = this.acquire(lvl + 1, px, py, pz);
+                try {
+                    parent.nonEmptyChildren |= (byte) (1 << childIdx);
+                } finally {
+                    parent.release();
                 }
             }
 
