@@ -152,7 +152,10 @@ public class WorldEngine {
     public void insertUpdate(VoxelizedSection section) {
         //The >>1 is cause the world sections size is 32x32x32 vs the 16x16x16 of the voxelized section
         for (int lvl = 0; lvl < this.maxMipLevels; lvl++) {
-            var worldSection = this.acquire(lvl, section.x >> (lvl + 1), section.y >> (lvl + 1), section.z >> (lvl + 1));
+            int sx = section.x >> (lvl + 1);
+            int sy = section.y >> (lvl + 1);
+            int sz = section.z >> (lvl + 1);
+            var worldSection = this.acquire(lvl, sx, sy, sz);
             boolean didChange = false;
             try {
                 int msk = (1<<(lvl+1))-1;
@@ -174,6 +177,23 @@ public class WorldEngine {
                 }
                 worldSection.release();
             }
+
+            // Update parent's nonEmptyChildren bitmask so the hierarchy can subdivide
+            if (lvl + 1 < this.maxMipLevels) {
+                int px = sx >> 1;
+                int py = sy >> 1;
+                int pz = sz >> 1;
+                int childIdx = (sx & 1) | ((sy & 1) << 1) | ((sz & 1) << 2);
+                var parent = this.acquireIfExists(lvl + 1, px, py, pz);
+                if (parent != null) {
+                    try {
+                        parent.nonEmptyChildren |= (byte) (1 << childIdx);
+                    } finally {
+                        parent.release();
+                    }
+                }
+            }
+
             if (!didChange) {
                 break;
             }
