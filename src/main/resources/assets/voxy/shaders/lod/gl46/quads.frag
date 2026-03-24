@@ -191,15 +191,8 @@ void main() {
     #endif
 
     #ifndef PATCHED_SHADER
-    // DEBUG: override colour with hash of modelId to verify texture pipeline
-    {
-        uint mid = getModelId();
-        uint h = mid * 2654435761u;
-        outColour = vec4(float((h>>0)&0xFFu)/255.0, float((h>>8)&0xFFu)/255.0, float((h>>16)&0xFFu)/255.0, 1.0);
-    }
-    // END DEBUG — uncomment below to restore normal rendering:
-    //colour = computeColour(texPos, colour);
-    //outColour = colour;
+    colour = computeColour(texPos, colour);
+    outColour = colour;
 
     #ifdef DEBUG_RENDER
     uint hash = quadDebug*1231421+123141;
