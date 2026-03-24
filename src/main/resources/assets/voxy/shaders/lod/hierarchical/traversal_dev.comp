@@ -125,7 +125,7 @@ void traverse(in UnpackedNode node) {
     setupScreenspace(node);
     //debugDumpNode(node);
 
-    if (outsideFrustum() || isCulledByHiz()) {
+    if (outsideFrustum() || isCulledByHiz_override()) {
         //printf("culled");
     } else {
         //It is visible, TODO: maybe do a more detailed hiz test? (or make it so that )
