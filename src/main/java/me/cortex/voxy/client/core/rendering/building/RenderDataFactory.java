@@ -1665,7 +1665,7 @@ public class RenderDataFactory {
         // if the connecting type of the translucent block is the same AND the face is full, discard it
         // this stops e.g. multiple layers of glass (and ocean) from having 3000 layers of quads etc
         if (this.quadCount == 0) {
-            return BuiltSection.emptyWithChildren(section.key, section.getNonEmptyChildren());
+            return BuiltSection.emptyWithChildren(section.key, computeChildExistence(section));
         }
 
         if (this.quadCount >= 1<<16) {
@@ -1707,7 +1707,41 @@ public class RenderDataFactory {
             this.occupancy.write(occupancy.address, false);
         }
 
-        return new BuiltSection(section.key, section.getNonEmptyChildren(), aabb, buff, offsets, occupancy);
+        return new BuiltSection(section.key, computeChildExistence(section), aabb, buff, offsets, occupancy);
+    }
+
+    /**
+     * Compute child existence bitmask by scanning section data for non-air blocks
+     * in each of the 8 child octants (16x16x16 each within the 32x32x32 section).
+     */
+    private static byte computeChildExistence(WorldSection section) {
+        byte mask = 0;
+        long[] data = section._unsafeGetRawDataArray();
+        if (data == null) return 0;
+        // Octant i = (x&1, y&1, z&1) where x,y,z are half-indices
+        // child 0=(0,0,0) child 1=(1,0,0) child 2=(0,1,0) ... child 7=(1,1,1)
+        for (int child = 0; child < 8; child++) {
+            int bx = (child & 1) * 16;
+            int by = ((child >> 1) & 1) * 16;
+            int bz = ((child >> 2) & 1) * 16;
+            boolean hasData = false;
+            outer:
+            for (int y = by; y < by + 16 && !hasData; y++) {
+                for (int z = bz; z < bz + 16 && !hasData; z++) {
+                    for (int x = bx; x < bx + 16; x++) {
+                        // index = (y<<10)|(z<<5)|x for 32x32x32
+                        if (data[(y << 10) | (z << 5) | x] != 0) {
+                            hasData = true;
+                            break outer;
+                        }
+                    }
+                }
+            }
+            if (hasData) {
+                mask |= (byte) (1 << child);
+            }
+        }
+        return mask;
     }
 
     public void free() {
