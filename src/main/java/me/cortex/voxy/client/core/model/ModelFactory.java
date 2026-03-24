@@ -242,6 +242,14 @@ public class ModelFactory {
             var bakeResult = this.processTextureBakeResult(bake.blockId, bake.state, textureData, isShaded, hasDarkenedTextures);
             if (bakeResult != null) {
                 this.uploadResults.add(bakeResult);
+            } else {
+                // processTextureBakeResult returned null — map to model 0 (air) and remove from inflight
+                if (this.idMappings[bake.blockId] == -1) {
+                    this.idMappings[bake.blockId] = 0;
+                }
+                this.blockStatesInFlightLock.lock();
+                this.blockStatesInFlight.remove(bake.blockId);
+                this.blockStatesInFlightLock.unlock();
             }
         } catch (Throwable t) {
             System.err.println("[Voxy] Failed to bake model for blockId=" + bake.blockId + " state=" + bake.state + ": " + t.getMessage());
