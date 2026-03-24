@@ -76,7 +76,12 @@ public class RenderGenerationService {
             //Thread local instance of the factory
             var factory = new RenderDataFactory(this.world, this.modelBakery.factory, this.emitMeshlets);
             IntOpenHashSet seenMissed = new IntOpenHashSet(128);
+            int[] jobCounter = {0};
             return new Pair<>(() -> {
+                // Clear seen cache every 100 jobs so new blocks can be re-requested
+                if (jobCounter[0]++ % 100 == 0) {
+                    seenMissed.clear();
+                }
                 this.processJob(factory, seenMissed);
             }, factory::free);
         }, 10, "Section mesh generation service");

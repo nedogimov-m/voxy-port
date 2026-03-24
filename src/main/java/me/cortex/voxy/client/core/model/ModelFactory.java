@@ -172,6 +172,10 @@ public class ModelFactory {
 
         //We need to get it twice cause of threading
         if (this.idMappings[blockId] != -1) {
+            // Remove from inflight since we won't be baking it
+            this.blockStatesInFlightLock.lock();
+            this.blockStatesInFlight.remove(blockId);
+            this.blockStatesInFlightLock.unlock();
             return false;
         }
 
