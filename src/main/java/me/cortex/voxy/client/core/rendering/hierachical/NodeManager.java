@@ -1127,14 +1127,15 @@ public class NodeManager {
         byte childExistence = this.nodeData.getNodeChildExistence(nodeId);
 
         if (childExistence == 0) {
-            if (this.topLevelNodes.contains(pos)) {
-                // Top-level nodes must always expand. Use 0xFF fallback.
+            // childExistence=0 in NodeStore: BuiltSection hasn't uploaded yet or
+            // section genuinely empty. Check if node has real geometry to distinguish.
+            int geo = this.nodeData.getNodeGeometry(nodeId);
+            if (this.topLevelNodes.contains(pos) || (geo != NULL_GEOMETRY_ID && geo != EMPTY_GEOMETRY_ID)) {
+                // Node has geometry — BuiltSection race condition. Use 0xFF fallback.
+                // Empty children will have EMPTY mesh and won't render.
                 childExistence = (byte) 0xFF;
             } else {
-                // Non-top-level: childExistence=0 means either BuiltSection hasn't
-                // uploaded yet, or section is genuinely empty. Reset request state
-                // and invalidate — GPU traversal will re-request later when
-                // childExistence has been updated from the uploaded BuiltSection.
+                // Genuinely empty or not yet loaded — skip.
                 this.nodeData.unmarkRequestInFlight(nodeId);
                 this.invalidateNode(nodeId);
                 return;
