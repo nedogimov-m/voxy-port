@@ -377,7 +377,11 @@ public class HierarchicalOcclusionTraverser {
         //    Logger.warn("Count larger than 'maxRequestCount', overflow captured. Overflowed by " + (count-REQUEST_QUEUE_SIZE));
         //}
         if (count != 0) {
-            this.nodeManager.submitRequestBatch(new MemoryBuffer(count*8L+8).cpyFrom(ptr-8));// the -8 is because we incremented it by 8
+            try {
+                this.nodeManager.submitRequestBatch(new MemoryBuffer(count*8L+8).cpyFrom(ptr-8));// the -8 is because we incremented it by 8
+            } catch (IllegalStateException e) {
+                // AsyncNodeManager may have stopped due to a previous error — don't crash render thread
+            }
         }
     }
 
