@@ -15,9 +15,15 @@ public class RenderStatistics {
     public static final int[] quadCount = new int[WorldEngine.MAX_LOD_LAYER+1];
 
 
+    private static int _logCounter = 0;
     public static void addDebug(List<String> debug) {
         if (!enabled) {
             return;
+        }
+        if (++_logCounter % 300 == 1) {
+            System.out.println("[Voxy STATS] HTC=" + java.util.Arrays.toString(flipCopy(hierarchicalTraversalCounts))
+                + " VS=" + java.util.Arrays.toString(flipCopy(visibleSections))
+                + " QC=" + java.util.Arrays.toString(flipCopy(quadCount)));
         }
         debug.add("HTC: [" + Arrays.stream(flipCopy(RenderStatistics.hierarchicalTraversalCounts)).mapToObj(Integer::toString).collect(Collectors.joining(", "))+"]");
         debug.add("HRS: [" + Arrays.stream(flipCopy(RenderStatistics.hierarchicalRenderSections)).mapToObj(Integer::toString).collect(Collectors.joining(", "))+"]");
