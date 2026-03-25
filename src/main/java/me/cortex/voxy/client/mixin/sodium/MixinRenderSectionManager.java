@@ -4,6 +4,7 @@ import me.cortex.voxy.client.config.VoxyConfig;
 import me.cortex.voxy.client.core.IGetVoxyRenderSystem;
 import me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.world.chunk.WorldChunk;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,10 +29,18 @@ public class MixinRenderSectionManager {
     @Inject(method = "onChunkAdded", at = @At("HEAD"))
     private void injectIngestOnLoad(int x, int z, CallbackInfo ci) {
         var renderer = ((IGetVoxyRenderSystem)(world.worldRenderer)).getVoxyRenderSystem();
-        if (renderer != null && VoxyConfig.CONFIG.ingestEnabled) {
-            WorldChunk chunk = world.getChunk(x, z);
-            if (chunk != null) {
-                renderer.getEngine().ingestService.enqueueIngest(chunk);
+        if (renderer != null) {
+            if (VoxyConfig.CONFIG.ingestEnabled) {
+                WorldChunk chunk = world.getChunk(x, z);
+                if (chunk != null) {
+                    renderer.getEngine().ingestService.enqueueIngest(chunk);
+                }
+            }
+            // Register chunk sections for depth bounding (LOD culling behind vanilla terrain)
+            int bottomY = world.getBottomSectionCoord();
+            int topY = world.getTopSectionCoord();
+            for (int y = bottomY; y < topY; y++) {
+                renderer.chunkBoundRenderer.addSection(ChunkSectionPos.asLong(x, y, z));
             }
         }
     }
@@ -39,10 +48,18 @@ public class MixinRenderSectionManager {
     @Inject(method = "onChunkRemoved", at = @At("HEAD"))
     private void injectIngestOnUnload(int x, int z, CallbackInfo ci) {
         var renderer = ((IGetVoxyRenderSystem)(world.worldRenderer)).getVoxyRenderSystem();
-        if (renderer != null && VoxyConfig.CONFIG.ingestEnabled) {
-            WorldChunk chunk = world.getChunk(x, z);
-            if (chunk != null) {
-                renderer.getEngine().ingestService.enqueueIngest(chunk);
+        if (renderer != null) {
+            if (VoxyConfig.CONFIG.ingestEnabled) {
+                WorldChunk chunk = world.getChunk(x, z);
+                if (chunk != null) {
+                    renderer.getEngine().ingestService.enqueueIngest(chunk);
+                }
+            }
+            // Unregister chunk sections from depth bounding
+            int bottomY = world.getBottomSectionCoord();
+            int topY = world.getTopSectionCoord();
+            for (int y = bottomY; y < topY; y++) {
+                renderer.chunkBoundRenderer.removeSection(ChunkSectionPos.asLong(x, y, z));
             }
         }
     }
