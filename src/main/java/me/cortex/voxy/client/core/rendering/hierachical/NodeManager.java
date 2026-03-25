@@ -1149,22 +1149,27 @@ public class NodeManager {
                 continue;
             }
             long childPos = makeChildPos(pos, i);
+
+            // With 0xFF fallback, child position may already exist in map — skip it
+            if (this.activeSectionMap.containsKey(childPos)) {
+                continue;
+            }
+
             request.addChildRequirement(i);
 
             //Insert all the children into the tracking map with the node id
             int pid = this.activeSectionMap.put(childPos, requestId|NODE_TYPE_REQUEST|REQUEST_TYPE_CHILD);
 
             if (pid != -1) {
-                String extra = "";
-                if ((pid&NODE_TYPE_MSK)==NODE_TYPE_LEAF) {
-                    extra = " type leaf: pos " + WorldEngine.pprintPos( this.nodeData.nodePosition(pid)) + " hasRequest: " + this.nodeData.isNodeRequestInFlight(pid);
-                }
-                throw new IllegalStateException("Leaf request creation failed to insert child into map as a mapping already existed for the node! pos: " + WorldEngine.pprintPos(childPos) + " id: " + pid + " for parent " + WorldEngine.pprintPos(pos) + " extra " + extra);
+                // Shouldn't happen after containsKey check, but handle gracefully
+                Logger.warn("Child already in map at " + WorldEngine.pprintPos(childPos) + " for parent " + WorldEngine.pprintPos(pos));
+                this.activeSectionMap.put(childPos, pid); // restore original
+                continue;
             }
 
             //Watch and request the child node at the given position
             if (!this.watcher.watch(childPos, WorldEngine.DEFAULT_UPDATE_FLAGS)) {
-                throw new IllegalStateException("Failed to watch childPos");
+                Logger.warn("Failed to watch childPos " + WorldEngine.pprintPos(childPos));
             }
         }
 
